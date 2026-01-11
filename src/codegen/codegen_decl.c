@@ -1,11 +1,11 @@
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include "codegen.h"
-#include "../zprep.h"
 #include "../ast/ast.h"
 #include "../parser/parser.h"
+#include "../zprep.h"
+#include "codegen.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 // Emit C preamble with standard includes and type definitions.
 void emit_preamble(FILE *out)
@@ -14,15 +14,16 @@ void emit_preamble(FILE *out)
     {
         // Freestanding preamble.
         // It actually needs more work, but yk.
-        fputs(
-            "#include <stddef.h>\n#include <stdint.h>\n#include <stdbool.h>\n#include <stdarg.h>\n",
-            out);
+        fputs("#include <stddef.h>\n#include <stdint.h>\n#include "
+              "<stdbool.h>\n#include <stdarg.h>\n",
+              out);
         fputs("#ifdef __TINYC__\n#define __auto_type __typeof__\n#endif\n", out);
         fputs("typedef size_t usize;\ntypedef char* string;\n", out);
         fputs("#define U0 void\n#define I8 int8_t\n#define U8 uint8_t\n#define I16 "
               "int16_t\n#define U16 uint16_t\n",
               out);
-        fputs("#define I32 int32_t\n#define U32 uint32_t\n#define I64 int64_t\n#define U64 "
+        fputs("#define I32 int32_t\n#define U32 uint32_t\n#define I64 "
+              "int64_t\n#define U64 "
               "uint64_t\n",
               out);
         fputs("#define F32 float\n#define F64 double\n", out);
@@ -36,7 +37,9 @@ void emit_preamble(FILE *out)
         fputs("typedef struct { void *func; void *ctx; } z_closure_T;\n", out);
 
         fputs("__attribute__((weak)) void* z_malloc(usize sz) { return NULL; }\n", out);
-        fputs("__attribute__((weak)) void* z_realloc(void* ptr, usize sz) { return NULL; }\n", out);
+        fputs("__attribute__((weak)) void* z_realloc(void* ptr, usize sz) { return "
+              "NULL; }\n",
+              out);
         fputs("__attribute__((weak)) void z_free(void* ptr) { }\n", out);
         fputs("__attribute__((weak)) void z_print(const char* fmt, ...) { }\n", out);
         fputs("__attribute__((weak)) void z_panic(const char* msg) { while(1); }\n", out);
@@ -44,7 +47,8 @@ void emit_preamble(FILE *out)
     else
     {
         // Standard hosted preamble.
-        fputs("#include <stdio.h>\n#include <stdlib.h>\n#include <stddef.h>\n#include <string.h>\n",
+        fputs("#include <stdio.h>\n#include <stdlib.h>\n#include "
+              "<stddef.h>\n#include <string.h>\n",
               out);
         fputs("#include <stdarg.h>\n#include <stdint.h>\n#include <stdbool.h>\n", out);
         fputs("#include <unistd.h>\n#include <fcntl.h>\n", out); // POSIX functions
@@ -56,7 +60,8 @@ void emit_preamble(FILE *out)
         fputs("#define U0 void\n#define I8 int8_t\n#define U8 uint8_t\n#define I16 "
               "int16_t\n#define U16 uint16_t\n",
               out);
-        fputs("#define I32 int32_t\n#define U32 uint32_t\n#define I64 int64_t\n#define U64 "
+        fputs("#define I32 int32_t\n#define U32 uint32_t\n#define I64 "
+              "int64_t\n#define U64 "
               "uint64_t\n",
               out);
         fputs("#define F32 float\n#define F64 double\n", out);
@@ -69,25 +74,32 @@ void emit_preamble(FILE *out)
               out);
 
         // Memory Mapping.
-        fputs("#define z_malloc malloc\n#define z_realloc realloc\n#define z_free free\n#define "
+        fputs("#define z_malloc malloc\n#define z_realloc realloc\n#define z_free "
+              "free\n#define "
               "z_print printf\n",
               out);
-        fputs(
-            "void z_panic(const char* msg) { fprintf(stderr, \"Panic: %s\\n\", msg); exit(1); }\n",
-            out);
+        fputs("void z_panic(const char* msg) { fprintf(stderr, \"Panic: %s\\n\", "
+              "msg); exit(1); }\n",
+              out);
 
-        fputs("void _z_autofree_impl(void *p) { void **pp = (void**)p; if(*pp) { z_free(*pp); *pp "
+        fputs("void _z_autofree_impl(void *p) { void **pp = (void**)p; if(*pp) { "
+              "z_free(*pp); *pp "
               "= NULL; } }\n",
               out);
-        fputs("#define assert(cond, ...) if (!(cond)) { fprintf(stderr, \"Assertion failed: \" "
+        fputs("#define assert(cond, ...) if (!(cond)) { fprintf(stderr, "
+              "\"Assertion failed: \" "
               "__VA_ARGS__); exit(1); }\n",
               out);
-        fputs("string _z_readln_raw() { char *line = NULL; size_t len = 0; if(getline(&line, &len, "
-              "stdin) == -1) return NULL; if(strlen(line) > 0 && line[strlen(line)-1] == '\\n') "
+        fputs("string _z_readln_raw() { char *line = NULL; size_t len = 0; "
+              "if(getline(&line, &len, "
+              "stdin) == -1) return NULL; if(strlen(line) > 0 && "
+              "line[strlen(line)-1] == '\\n') "
               "line[strlen(line)-1] = 0; return line; }\n",
               out);
-        fputs("int _z_scan_helper(const char *fmt, ...) { char *l = _z_readln_raw(); if(!l) return "
-              "0; va_list ap; va_start(ap, fmt); int r = vsscanf(l, fmt, ap); va_end(ap); "
+        fputs("int _z_scan_helper(const char *fmt, ...) { char *l = "
+              "_z_readln_raw(); if(!l) return "
+              "0; va_list ap; va_start(ap, fmt); int r = vsscanf(l, fmt, ap); "
+              "va_end(ap); "
               "z_free(l); return r; }\n",
               out);
 
@@ -235,6 +247,13 @@ void emit_struct_defs(ParserContext *ctx, ASTNode *node, FILE *out)
         }
         if (node->type == NODE_STRUCT)
         {
+            if (node->strct.is_incomplete)
+            {
+                // Forward declaration - no body needed (typedef handles it)
+                node = node->next;
+                continue;
+            }
+
             if (node->strct.is_union)
             {
                 fprintf(out, "union %s {", node->strct.name);
@@ -763,35 +782,40 @@ void print_type_defs(ParserContext *ctx, FILE *out, ASTNode *nodes)
 
     fprintf(out, "typedef struct { void **data; int len; int cap; } Vec;\n");
     fprintf(out, "#define Vec_new() (Vec){.data=0, .len=0, .cap=0}\n");
-    fprintf(
-        out,
-        "void _z_vec_push(Vec *v, void *item) { if(v->len >= v->cap) { v->cap = v->cap?v->cap*2:8; "
-        "v->data = z_realloc(v->data, v->cap * sizeof(void*)); } v->data[v->len++] = item; }\n");
+    fprintf(out, "void _z_vec_push(Vec *v, void *item) { if(v->len >= v->cap) { "
+                 "v->cap = v->cap?v->cap*2:8; "
+                 "v->data = z_realloc(v->data, v->cap * sizeof(void*)); } "
+                 "v->data[v->len++] = item; }\n");
     fprintf(out, "#define Vec_push(v, i) _z_vec_push(&(v), (void*)(long)(i))\n");
-    fprintf(out, "static inline Vec _z_make_vec(int count, ...) { Vec v = {0}; v.cap = count > 8 ? "
-                 "count : 8; v.data = z_malloc(v.cap * sizeof(void*)); v.len = 0; va_list args; "
+    fprintf(out, "static inline Vec _z_make_vec(int count, ...) { Vec v = {0}; v.cap = "
+                 "count > 8 ? "
+                 "count : 8; v.data = z_malloc(v.cap * sizeof(void*)); v.len = 0; va_list "
+                 "args; "
                  "va_start(args, count); for(int i=0; i<count; i++) { v.data[v.len++] = "
                  "va_arg(args, void*); } va_end(args); return v; }\n");
 
     if (g_config.is_freestanding)
     {
-        fprintf(out, "#define _z_check_bounds(index, limit) ({ __auto_type _i = (index); if(_i < 0 "
+        fprintf(out, "#define _z_check_bounds(index, limit) ({ __auto_type _i = "
+                     "(index); if(_i < 0 "
                      "|| _i >= (limit)) { z_panic(\"index out of bounds\"); } _i; })\n");
     }
     else
     {
-        fprintf(out, "#define _z_check_bounds(index, limit) ({ __auto_type _i = (index); if(_i < 0 "
-                     "|| _i >= (limit)) { fprintf(stderr, \"Index out of bounds: %%ld (limit "
+        fprintf(out, "#define _z_check_bounds(index, limit) ({ __auto_type _i = "
+                     "(index); if(_i < 0 "
+                     "|| _i >= (limit)) { fprintf(stderr, \"Index out of bounds: "
+                     "%%ld (limit "
                      "%%d)\\n\", (long)_i, (int)(limit)); exit(1); } _i; })\n");
     }
 
     SliceType *c = ctx->used_slices;
     while (c)
     {
-        fprintf(
-            out,
-            "typedef struct Slice_%s Slice_%s;\nstruct Slice_%s { %s *data; int len; int cap; };\n",
-            c->name, c->name, c->name, c->name);
+        fprintf(out,
+                "typedef struct Slice_%s Slice_%s;\nstruct Slice_%s { %s *data; "
+                "int len; int cap; };\n",
+                c->name, c->name, c->name, c->name);
         c = c->next;
     }
 
@@ -814,8 +838,8 @@ void print_type_defs(ParserContext *ctx, FILE *out, ASTNode *nodes)
     }
     fprintf(out, "\n");
 
-    // FIRST: Emit typedefs for ALL structs and enums in the current compilation unit (local
-    // definitions)
+    // FIRST: Emit typedefs for ALL structs and enums in the current compilation
+    // unit (local definitions)
     ASTNode *local = nodes;
     while (local)
     {

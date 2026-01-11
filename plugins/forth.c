@@ -1,9 +1,9 @@
 
 #include "zprep_plugin.h"
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 
 static long stack[256];
 static int sp = 0;
@@ -598,7 +598,8 @@ void process_forth_source(char *src, char **out_ptr)
 
 void load_prelude()
 {
-    char prelude[] = ": squared fdup f* ; : hypot squared fswap squared f+ fsqrt ; : over swap dup "
+    char prelude[] = ": squared fdup f* ; : hypot squared fswap squared f+ fsqrt "
+                     "; : over swap dup "
                      "rot rot ; : panic 0 1 - exit ; ";
     char dummy_buf[1024];
     dummy_buf[0] = '\0';

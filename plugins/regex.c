@@ -1,9 +1,9 @@
 
 #include "zprep_plugin.h"
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 
 static void emit_match_logic(const char *pattern, FILE *out, int *label_counter);
 
@@ -111,7 +111,8 @@ static void emit_match_logic(const char *pattern, FILE *out, int * /*label_count
             }
             else
             {
-                fprintf(out, "        if (*c == 0) return 0;\n"); // End of input for single char
+                fprintf(out,
+                        "        if (*c == 0) return 0;\n"); // End of input for single char
             }
 
             fprintf(out, "        int match = 0;\n");

@@ -2,8 +2,8 @@
 #ifndef AST_H
 #define AST_H
 
-#include <stdlib.h>
 #include "zprep.h"
+#include <stdlib.h>
 
 // Forward declarations.
 struct ASTNode;
@@ -129,12 +129,13 @@ struct ASTNode
     int line; // Source line number for debugging.
 
     // Type information.
-    char *resolved_type; // Legacy string representation (for example: "int", "User*").
-                         // > Yes, 'legacy' is a thing, this is the third iteration
-                         // > of this project (for now).
+    char *resolved_type; // Legacy string representation (for example: "int",
+                         // "User*"). > Yes, 'legacy' is a thing, this is the
+                         // third iteration > of this project (for now).
     Type *type_info;     // Formal type object (for inference/generics).
     Token token;
-    Token definition_token; // For LSP: Location where the symbol used in this node was defined.
+    Token definition_token; // For LSP: Location where the symbol used in this
+                            // node was defined.
 
     union
     {
@@ -375,8 +376,9 @@ struct ASTNode
             char *generic_param;
             char *parent;
             int is_union;
-            int is_packed; // @packed attribute.
-            int align;     // @align(N) attribute, 0 = default.
+            int is_packed;     // @packed attribute.
+            int align;         // @align(N) attribute, 0 = default.
+            int is_incomplete; // Forward declaration (prototype)
         } strct;
 
         struct

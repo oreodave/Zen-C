@@ -1,10 +1,10 @@
 
+#include "../zen/zen_facts.h"
+#include "parser.h"
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
-#include "parser.h"
-#include "../zen/zen_facts.h"
 
 Type *get_field_type(ParserContext *ctx, Type *struct_type, const char *field_name);
 
@@ -1411,7 +1411,8 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
                 Type *st = type_new(TYPE_STRUCT);
                 st->name = xstrdup(struct_name);
                 node->type_info = st;
-                return node; // Struct init cannot be called/indexed usually, return early
+                return node; // Struct init cannot be called/indexed usually, return
+                             // early
             }
         }
 
@@ -1456,7 +1457,6 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
             else
             {
                 // readln(vars...) -> _z_scan_helper("fmt", &vars...)
-                // 1. Build Format String
                 char fmt[256];
                 fmt[0] = 0;
                 for (int i = 0; i < ac; i++)
@@ -1505,14 +1505,12 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
                     }
                 }
 
-                // 2. Build Call Node
                 node = ast_create(NODE_EXPR_CALL);
                 ASTNode *callee = ast_create(NODE_EXPR_VAR);
                 callee->var_ref.name = xstrdup("_z_scan_helper");
                 node->call.callee = callee;
                 node->type_info = type_new(TYPE_INT); // Returns count
 
-                // 3. Build Args List: "fmt" then &arg1, &arg2...
                 ASTNode *fmt_node = ast_create(NODE_EXPR_LITERAL);
                 fmt_node->literal.type_kind = 2; // string
                 fmt_node->literal.string_val = xstrdup(fmt);
@@ -1532,218 +1530,216 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
                 node->call.args = head;
             }
             free(acc);
-
         }
-        else
-            if (sig && lexer_peek(l).type == TOK_LPAREN)
+        else if (sig && lexer_peek(l).type == TOK_LPAREN)
+        {
+            lexer_next(l);
+            ASTNode *head = NULL, *tail = NULL;
+            int args_provided = 0;
+            char **arg_names = NULL;
+            int has_named = 0;
+
+            if (lexer_peek(l).type != TOK_RPAREN)
             {
-                lexer_next(l);
-                ASTNode *head = NULL, *tail = NULL;
-                int args_provided = 0;
-                char **arg_names = NULL;
-                int has_named = 0;
-
-                if (lexer_peek(l).type != TOK_RPAREN)
+                while (1)
                 {
-                    while (1)
+                    char *arg_name = NULL;
+
+                    Token t1 = lexer_peek(l);
+                    if (t1.type == TOK_IDENT)
                     {
-                        char *arg_name = NULL;
-
-                        Token t1 = lexer_peek(l);
-                        if (t1.type == TOK_IDENT)
+                        Token t2 = lexer_peek2(l);
+                        if (t2.type == TOK_COLON)
                         {
-                            Token t2 = lexer_peek2(l);
-                            if (t2.type == TOK_COLON)
-                            {
-                                arg_name = token_strdup(t1);
-                                has_named = 1;
-                                lexer_next(l);
-                                lexer_next(l);
-                            }
-                        }
-
-                        ASTNode *arg = parse_expression(ctx, l);
-                        if (!head)
-                        {
-                            head = arg;
-                        }
-                        else
-                        {
-                            tail->next = arg;
-                        }
-                        tail = arg;
-                        args_provided++;
-
-                        arg_names = xrealloc(arg_names, args_provided * sizeof(char *));
-                        arg_names[args_provided - 1] = arg_name;
-
-                        arg_names = xrealloc(arg_names, args_provided * sizeof(char *));
-                        arg_names[args_provided - 1] = arg_name;
-
-                        if (lexer_peek(l).type == TOK_COMMA)
-                        {
+                            arg_name = token_strdup(t1);
+                            has_named = 1;
+                            lexer_next(l);
                             lexer_next(l);
                         }
-                        else
-                        {
-                            break;
-                        }
                     }
-                }
-                if (lexer_next(l).type != TOK_RPAREN)
-                {
-                    zpanic("Expected )");
-                }
-                for (int i = args_provided; i < sig->total_args; i++)
-                {
-                    if (sig->defaults[i])
+
+                    ASTNode *arg = parse_expression(ctx, l);
+                    if (!head)
                     {
-                        ASTNode *def = ast_create(NODE_RAW_STMT);
-                        def->raw_stmt.content = xstrdup(sig->defaults[i]);
-                        if (!head)
-                        {
-                            head = def;
-                        }
-                        else
-                        {
-                            tail->next = def;
-                        }
-                        tail = def;
+                        head = arg;
                     }
-                }
-                node = ast_create(NODE_EXPR_CALL);
-                node->token = t; // Set source token
-                ASTNode *callee = ast_create(NODE_EXPR_VAR);
-                callee->var_ref.name = acc;
-                node->call.callee = callee;
-                node->call.args = head;
-                node->call.arg_names = has_named ? arg_names : NULL;
-                node->call.arg_count = args_provided;
-                if (sig)
-                {
-                    node->definition_token = sig->decl_token;
-                }
-                if (sig->is_async)
-                {
-                    Type *async_type = type_new(TYPE_STRUCT);
-                    async_type->name = xstrdup("Async");
-                    node->type_info = async_type;
-                    node->resolved_type = xstrdup("Async");
-                }
-                else if (sig->ret_type)
-                {
-                    node->type_info = sig->ret_type;
-                    node->resolved_type = type_to_string(sig->ret_type);
-                }
-                else
-                {
-                    node->resolved_type = xstrdup("void");
+                    else
+                    {
+                        tail->next = arg;
+                    }
+                    tail = arg;
+                    args_provided++;
+
+                    arg_names = xrealloc(arg_names, args_provided * sizeof(char *));
+                    arg_names[args_provided - 1] = arg_name;
+
+                    arg_names = xrealloc(arg_names, args_provided * sizeof(char *));
+                    arg_names[args_provided - 1] = arg_name;
+
+                    if (lexer_peek(l).type == TOK_COMMA)
+                    {
+                        lexer_next(l);
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
             }
-            else if (!sig && !find_symbol_entry(ctx, acc) && lexer_peek(l).type == TOK_LPAREN)
+            if (lexer_next(l).type != TOK_RPAREN)
             {
-                lexer_next(l); // eat (
-                ASTNode *head = NULL, *tail = NULL;
-                char **arg_names = NULL;
-                int args_provided = 0;
-                int has_named = 0;
-
-                if (lexer_peek(l).type != TOK_RPAREN)
+                zpanic("Expected )");
+            }
+            for (int i = args_provided; i < sig->total_args; i++)
+            {
+                if (sig->defaults[i])
                 {
-                    while (1)
+                    ASTNode *def = ast_create(NODE_RAW_STMT);
+                    def->raw_stmt.content = xstrdup(sig->defaults[i]);
+                    if (!head)
                     {
-                        char *arg_name = NULL;
-
-                        // Check for named argument: name: value
-                        Token t1 = lexer_peek(l);
-                        if (t1.type == TOK_IDENT)
-                        {
-                            Token t2 = lexer_peek2(l);
-                            if (t2.type == TOK_COLON)
-                            {
-                                arg_name = token_strdup(t1);
-                                has_named = 1;
-                                lexer_next(l);
-                                lexer_next(l);
-                            }
-                        }
-
-                        ASTNode *arg = parse_expression(ctx, l);
-                        if (!head)
-                        {
-                            head = arg;
-                        }
-                        else
-                        {
-                            tail->next = arg;
-                        }
-                        tail = arg;
-                        args_provided++;
-
-                        arg_names = xrealloc(arg_names, args_provided * sizeof(char *));
-                        arg_names[args_provided - 1] = arg_name;
-
-                        if (lexer_peek(l).type == TOK_COMMA)
-                        {
-                            lexer_next(l);
-                        }
-                        else
-                        {
-                            break;
-                        }
+                        head = def;
                     }
+                    else
+                    {
+                        tail->next = def;
+                    }
+                    tail = def;
                 }
-                if (lexer_next(l).type != TOK_RPAREN)
-                {
-                    zpanic("Expected )");
-                }
-
-                node = ast_create(NODE_EXPR_CALL);
-                node->token = t;
-                ASTNode *callee = ast_create(NODE_EXPR_VAR);
-                callee->var_ref.name = acc;
-                node->call.callee = callee;
-                node->call.args = head;
-                node->call.arg_names = has_named ? arg_names : NULL;
-                node->call.arg_count = args_provided;
-                // Unknown return type - let codegen infer it
-                node->resolved_type = xstrdup("unknown");
-                // Fall through to Postfix
+            }
+            node = ast_create(NODE_EXPR_CALL);
+            node->token = t; // Set source token
+            ASTNode *callee = ast_create(NODE_EXPR_VAR);
+            callee->var_ref.name = acc;
+            node->call.callee = callee;
+            node->call.args = head;
+            node->call.arg_names = has_named ? arg_names : NULL;
+            node->call.arg_count = args_provided;
+            if (sig)
+            {
+                node->definition_token = sig->decl_token;
+            }
+            if (sig->is_async)
+            {
+                Type *async_type = type_new(TYPE_STRUCT);
+                async_type->name = xstrdup("Async");
+                node->type_info = async_type;
+                node->resolved_type = xstrdup("Async");
+            }
+            else if (sig->ret_type)
+            {
+                node->type_info = sig->ret_type;
+                node->resolved_type = type_to_string(sig->ret_type);
             }
             else
             {
-                node = ast_create(NODE_EXPR_VAR);
-                node->token = t; // Set source token
-                node->var_ref.name = acc;
-                node->type_info = find_symbol_type_info(ctx, acc);
+                node->resolved_type = xstrdup("void");
+            }
+        }
+        else if (!sig && !find_symbol_entry(ctx, acc) && lexer_peek(l).type == TOK_LPAREN)
+        {
+            lexer_next(l); // eat (
+            ASTNode *head = NULL, *tail = NULL;
+            char **arg_names = NULL;
+            int args_provided = 0;
+            int has_named = 0;
 
-                Symbol *sym = find_symbol_entry(ctx, acc);
-                if (sym)
+            if (lexer_peek(l).type != TOK_RPAREN)
+            {
+                while (1)
                 {
-                    sym->is_used = 1;
-                    node->definition_token = sym->decl_token;
+                    char *arg_name = NULL;
+
+                    // Check for named argument: name: value
+                    Token t1 = lexer_peek(l);
+                    if (t1.type == TOK_IDENT)
+                    {
+                        Token t2 = lexer_peek2(l);
+                        if (t2.type == TOK_COLON)
+                        {
+                            arg_name = token_strdup(t1);
+                            has_named = 1;
+                            lexer_next(l);
+                            lexer_next(l);
+                        }
+                    }
+
+                    ASTNode *arg = parse_expression(ctx, l);
+                    if (!head)
+                    {
+                        head = arg;
+                    }
+                    else
+                    {
+                        tail->next = arg;
+                    }
+                    tail = arg;
+                    args_provided++;
+
+                    arg_names = xrealloc(arg_names, args_provided * sizeof(char *));
+                    arg_names[args_provided - 1] = arg_name;
+
+                    if (lexer_peek(l).type == TOK_COMMA)
+                    {
+                        lexer_next(l);
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
+            }
+            if (lexer_next(l).type != TOK_RPAREN)
+            {
+                zpanic("Expected )");
+            }
 
-                char *type_str = find_symbol_type(ctx, acc);
+            node = ast_create(NODE_EXPR_CALL);
+            node->token = t;
+            ASTNode *callee = ast_create(NODE_EXPR_VAR);
+            callee->var_ref.name = acc;
+            node->call.callee = callee;
+            node->call.args = head;
+            node->call.arg_names = has_named ? arg_names : NULL;
+            node->call.arg_count = args_provided;
+            // Unknown return type - let codegen infer it
+            node->resolved_type = xstrdup("unknown");
+            // Fall through to Postfix
+        }
+        else
+        {
+            node = ast_create(NODE_EXPR_VAR);
+            node->token = t; // Set source token
+            node->var_ref.name = acc;
+            node->type_info = find_symbol_type_info(ctx, acc);
 
-                if (type_str)
+            Symbol *sym = find_symbol_entry(ctx, acc);
+            if (sym)
+            {
+                sym->is_used = 1;
+                node->definition_token = sym->decl_token;
+            }
+
+            char *type_str = find_symbol_type(ctx, acc);
+
+            if (type_str)
+            {
+                node->resolved_type = type_str;
+                node->var_ref.suggestion = NULL;
+            }
+            else
+            {
+                node->resolved_type = xstrdup("unknown");
+                if (should_suppress_undef_warning(ctx, acc))
                 {
-                    node->resolved_type = type_str;
                     node->var_ref.suggestion = NULL;
                 }
                 else
                 {
-                    node->resolved_type = xstrdup("unknown");
-                    if (should_suppress_undef_warning(ctx, acc))
-                    {
-                        node->var_ref.suggestion = NULL;
-                    }
-                    else
-                    {
-                        node->var_ref.suggestion = find_similar_symbol(ctx, acc);
-                    }
+                    node->var_ref.suggestion = find_similar_symbol(ctx, acc);
                 }
             }
+        }
     }
 
     else if (t.type == TOK_LPAREN)
@@ -2421,7 +2417,8 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
         lhs = ast_create(NODE_AWAIT);
         lhs->unary.operand = operand;
         // Type inference: await Async<T> yields T
-        // If operand is a call to an async function, look up its ret_type (not Async)
+        // If operand is a call to an async function, look up its ret_type (not
+        // Async)
         if (operand->type == NODE_EXPR_CALL && operand->call.callee->type == NODE_EXPR_VAR)
         {
             FuncSig *sig = find_func(ctx, operand->call.callee->var_ref.name);
@@ -2924,8 +2921,9 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
                         // Clean up string for registration (e.g. "int" from "int*")
                         char *inner_str = type_to_string(inner);
 
-                        // Strip * if it somehow managed to keep one, though parse_type_formal
-                        // should handle it For now assume type_to_string gives base type
+                        // Strip * if it somehow managed to keep one, though
+                        // parse_type_formal should handle it For now assume type_to_string
+                        // gives base type
                         register_slice(ctx, inner_str);
                     }
                 }
@@ -3050,7 +3048,8 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
                     FuncSig *sig = find_func(ctx, mangled);
                     if (sig)
                     {
-                        // It is a method! Create a Function Type Info to carry the return type
+                        // It is a method! Create a Function Type Info to carry the return
+                        // type
                         Type *ft = type_new(TYPE_FUNCTION);
                         ft->name = xstrdup(mangled);
                         ft->inner = sig->ret_type; // Return type
@@ -3164,7 +3163,7 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
                 }
             }
         }
-        
+
         if (strcmp(bin->binary.op, "=") == 0 || strcmp(bin->binary.op, "+=") == 0 ||
             strcmp(bin->binary.op, "-=") == 0 || strcmp(bin->binary.op, "*=") == 0 ||
             strcmp(bin->binary.op, "/=") == 0)
@@ -3183,13 +3182,14 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
                 if (!is_var_mutable(ctx, lhs->var_ref.name))
                 {
                     zpanic_at(op,
-                              "Cannot assign to immutable variable '%s' (use 'var mut' to make it "
+                              "Cannot assign to immutable variable '%s' (use 'var mut' "
+                              "to make it "
                               "mutable)",
                               lhs->var_ref.name);
                 }
             }
         }
-        
+
         int is_compound = 0;
         size_t op_len = strlen(bin->binary.op);
 
@@ -3318,7 +3318,8 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
                         set_callee->var_ref.name = set_name;
                         set_call->call.callee = set_callee;
 
-                        // Clone argument list (Shallow copy of arg nodes to preserve chain for get)
+                        // Clone argument list (Shallow copy of arg nodes to preserve chain
+                        // for get)
                         ASTNode *lhs_args = lhs->call.args;
                         ASTNode *new_head = NULL;
                         ASTNode *new_tail = NULL;

@@ -1,12 +1,11 @@
 
+#include "json_rpc.h"
+#include "lsp_index.h"
+#include "parser.h"
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
-#include "parser.h"
-#include "parser.h"
-#include "json_rpc.h"
-#include "lsp_index.h"
 
 static LSPIndex *g_index = NULL;
 
@@ -101,7 +100,8 @@ void lsp_check_file(const char *uri, const char *json_src)
     {
 
         p += sprintf(p,
-                     "{\"range\":{\"start\":{\"line\":%d,\"character\":%d},\"end\":{\"line\":%d,"
+                     "{\"range\":{\"start\":{\"line\":%d,\"character\":%d},\"end\":"
+                     "{\"line\":%d,"
                      "\"character\":%d}},\"severity\":1,\"message\":\"%s\"}",
                      d->line, d->col, d->line, d->col + 1, d->message);
 
@@ -146,8 +146,10 @@ void lsp_goto_definition(const char *uri, int line, int col)
         // Found reference, return definition
         char resp[1024];
         sprintf(resp,
-                "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"uri\":\"%s\",\"range\":{\"start\":{"
-                "\"line\":%d,\"character\":%d},\"end\":{\"line\":%d,\"character\":%d}}}}",
+                "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"uri\":\"%s\","
+                "\"range\":{\"start\":{"
+                "\"line\":%d,\"character\":%d},\"end\":{\"line\":%d,\"character\":%"
+                "d}}}}",
                 uri, r->def_line, r->def_col, r->def_line, r->def_col);
 
         fprintf(stdout, "Content-Length: %ld\r\n\r\n%s", strlen(resp), resp);
@@ -158,8 +160,10 @@ void lsp_goto_definition(const char *uri, int line, int col)
         // Already at definition? Return itself.
         char resp[1024];
         sprintf(resp,
-                "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"uri\":\"%s\",\"range\":{\"start\":{"
-                "\"line\":%d,\"character\":%d},\"end\":{\"line\":%d,\"character\":%d}}}}",
+                "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"uri\":\"%s\","
+                "\"range\":{\"start\":{"
+                "\"line\":%d,\"character\":%d},\"end\":{\"line\":%d,\"character\":%"
+                "d}}}}",
                 uri, r->start_line, r->start_col, r->end_line, r->end_col);
 
         fprintf(stdout, "Content-Length: %ld\r\n\r\n%s", strlen(resp), resp);
@@ -206,7 +210,8 @@ void lsp_hover(const char *uri, int line, int col)
         char *json = malloc(16384);
         // content: { kind: markdown, value: text }
         sprintf(json,
-                "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"contents\":{\"kind\":\"markdown\","
+                "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"contents\":{\"kind\":"
+                "\"markdown\","
                 "\"value\":\"```c\\n%s\\n```\"}}}",
                 text);
 

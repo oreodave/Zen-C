@@ -1,9 +1,9 @@
 
+#include "ast.h"
+#include "../parser/parser.h"
+#include "zprep.h"
 #include <stdlib.h>
 #include <string.h>
-#include "ast.h"
-#include "zprep.h"
-#include "../parser/parser.h"
 
 typedef struct TraitReg
 {

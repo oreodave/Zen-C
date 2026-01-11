@@ -1,14 +1,14 @@
 
 #include "zprep_plugin.h"
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 
 typedef struct Col
 {
     char name[32];
-    char type[32]; 
+    char type[32];
     struct Col *next;
 } Col;
 

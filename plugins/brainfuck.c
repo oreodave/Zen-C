@@ -4,8 +4,8 @@
 void bf_transpile(const char *input_body, const ZApi *api)
 {
     FILE *out = api->out;
-    fprintf(out,
-            "{\n    static unsigned char tape[30000] = {0};\n    unsigned char *ptr = tape;\n");
+    fprintf(out, "{\n    static unsigned char tape[30000] = {0};\n    unsigned "
+                 "char *ptr = tape;\n");
     const char *c = input_body;
     while (*c)
     {

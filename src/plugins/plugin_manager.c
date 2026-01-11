@@ -1,9 +1,9 @@
 
 #include "plugin_manager.h"
+#include <dlfcn.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <dlfcn.h>
 
 // Linked list node for plugins.
 typedef struct PluginNode

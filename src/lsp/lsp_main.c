@@ -1,9 +1,9 @@
 
+#include "json_rpc.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "json_rpc.h"
 
 // Simple Main Loop for LSP.
 int lsp_main(int argc, char **argv)

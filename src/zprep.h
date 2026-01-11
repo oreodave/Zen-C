@@ -2,11 +2,11 @@
 #ifndef ZPREP_H
 #define ZPREP_H
 
+#include <ctype.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
-#include <stdarg.h>
 
 // ** ANSI COLORS **
 #define COLOR_RESET "\033[0m"

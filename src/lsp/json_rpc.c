@@ -1,8 +1,8 @@
 
+#include "json_rpc.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "json_rpc.h"
 
 // Basic JSON parsing helpers
 char *get_json_string(const char *json, const char *key)
@@ -27,8 +27,9 @@ char *get_json_string(const char *json, const char *key)
     return res;
 }
 
-// Extract nested "text" from params/contentChanges/0/text or params/textDocument/text
-// This is very hacky for MVP. proper JSON library needed.
+// Extract nested "text" from params/contentChanges/0/text or
+// params/textDocument/text This is very hacky for MVP. proper JSON library
+// needed.
 
 char *get_text_content(const char *json)
 {
@@ -116,10 +117,11 @@ void handle_request(const char *json_str)
 {
     if (strstr(json_str, "\"method\":\"initialize\""))
     {
-        const char *response =
-            "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"capabilities\":{\"textDocumentSync\":1,"
-            "\"definitionProvider\":true,\"hoverProvider\":true,\"completionProvider\":{"
-            "\"triggerCharacters\":[\".\"]}}}}";
+        const char *response = "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{"
+                               "\"capabilities\":{\"textDocumentSync\":1,"
+                               "\"definitionProvider\":true,\"hoverProvider\":true,"
+                               "\"completionProvider\":{"
+                               "\"triggerCharacters\":[\".\"]}}}}";
         fprintf(stdout, "Content-Length: %ld\r\n\r\n%s", strlen(response), response);
         fflush(stdout);
         return;

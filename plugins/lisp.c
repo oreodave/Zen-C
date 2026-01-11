@@ -1,9 +1,9 @@
 
 #include "zprep_plugin.h"
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 
 static void skip_whitespace(const char **p)
 {
@@ -421,36 +421,42 @@ void lisp_transpile(const char *input_body, const ZApi *api)
         FILE *h = api->hoist_out;
         fprintf(h, "/* Lisp Runtime */\n");
         fprintf(h, "typedef enum { L_NUM, L_PAIR, L_NIL } LType;\n");
-        fprintf(h, "typedef struct LVal { LType type; union { long num; struct { struct LVal *car; "
+        fprintf(h, "typedef struct LVal { LType type; union { long num; struct { "
+                   "struct LVal *car; "
                    "struct LVal *cdr; } pair; }; } *LVal;\n");
         fprintf(h, "static struct LVal _nil = { L_NIL }; static LVal LNIL = &_nil;\n");
         fprintf(h, "static LVal nil = &_nil;\n"); // Use static for file scope
         fprintf(h, "static LVal l_num(long n) { LVal v = malloc(sizeof(struct LVal)); "
                    "v->type=L_NUM; v->num=n; return v; }\n");
         fprintf(h, "static LVal l_nil() { return LNIL; }\n");
-        fprintf(h, "static LVal l_cons(LVal a, LVal b) { LVal v = malloc(sizeof(struct LVal)); "
+        fprintf(h, "static LVal l_cons(LVal a, LVal b) { LVal v = "
+                   "malloc(sizeof(struct LVal)); "
                    "v->type=L_PAIR; v->pair.car=a; v->pair.cdr=b; return v; }\n");
-        fprintf(
-            h,
-            "static LVal l_car(LVal v) { return (v && v->type==L_PAIR) ? v->pair.car : LNIL; }\n");
-        fprintf(
-            h,
-            "static LVal l_cdr(LVal v) { return (v && v->type==L_PAIR) ? v->pair.cdr : LNIL; }\n");
+        fprintf(h, "static LVal l_car(LVal v) { return (v && v->type==L_PAIR) ? "
+                   "v->pair.car : LNIL; }\n");
+        fprintf(h, "static LVal l_cdr(LVal v) { return (v && v->type==L_PAIR) ? "
+                   "v->pair.cdr : LNIL; }\n");
         fprintf(h, "static int l_truthy(LVal v) { return (v && v->type!=L_NIL); }\n");
-        fprintf(h, "static LVal l_add(LVal a, LVal b) { long x=(a&&a->type==L_NUM)?a->num:0; long "
+        fprintf(h, "static LVal l_add(LVal a, LVal b) { long "
+                   "x=(a&&a->type==L_NUM)?a->num:0; long "
                    "y=(b&&b->type==L_NUM)?b->num:0; return l_num(x+y); }\n");
-        fprintf(h, "static LVal l_sub(LVal a, LVal b) { long x=(a&&a->type==L_NUM)?a->num:0; long "
+        fprintf(h, "static LVal l_sub(LVal a, LVal b) { long "
+                   "x=(a&&a->type==L_NUM)?a->num:0; long "
                    "y=(b&&b->type==L_NUM)?b->num:0; return l_num(x-y); }\n");
-        fprintf(h, "static LVal l_mul(LVal a, LVal b) { long x=(a&&a->type==L_NUM)?a->num:0; long "
+        fprintf(h, "static LVal l_mul(LVal a, LVal b) { long "
+                   "x=(a&&a->type==L_NUM)?a->num:0; long "
                    "y=(b&&b->type==L_NUM)?b->num:0; return l_num(x*y); }\n");
-        fprintf(h, "static LVal l_div(LVal a, LVal b) { long x=(a&&a->type==L_NUM)?a->num:0; long "
+        fprintf(h, "static LVal l_div(LVal a, LVal b) { long "
+                   "x=(a&&a->type==L_NUM)?a->num:0; long "
                    "y=(b&&b->type==L_NUM)?b->num:0; return l_num(y?x/y:0); }\n");
-        fprintf(h, "static LVal l_lt(LVal a, LVal b) { long x=(a&&a->type==L_NUM)?a->num:0; long "
+        fprintf(h, "static LVal l_lt(LVal a, LVal b) { long "
+                   "x=(a&&a->type==L_NUM)?a->num:0; long "
                    "y=(b&&b->type==L_NUM)?b->num:0; return (x<y)?l_num(1):LNIL; }\n");
         fprintf(h, "static void l_print(LVal v) { \n");
         fprintf(h, "  if(!v || v->type==L_NIL) printf(\"nil\");\n");
         fprintf(h, "  else if(v->type==L_NUM) printf(\"%%ld\", v->num);\n");
-        fprintf(h, "  else if(v->type==L_PAIR) { printf(\"(\"); l_print(v->pair.car); printf(\" . "
+        fprintf(h, "  else if(v->type==L_PAIR) { printf(\"(\"); "
+                   "l_print(v->pair.car); printf(\" . "
                    "\"); l_print(v->pair.cdr); printf(\")\"); }\n");
         fprintf(h, "}\n");
 

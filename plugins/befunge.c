@@ -80,7 +80,8 @@ void befunge_transpile(const char *input_body, const ZApi *api)
             if (op >= '0' && op <= '9')
             {
                 fprintf(out,
-                        "    if(string_mode) { stack[sp++] = '%c'; } else { stack[sp++] = %c; }\n",
+                        "    if(string_mode) { stack[sp++] = '%c'; } else { "
+                        "stack[sp++] = %c; }\n",
                         op, op);
             }
             else if (op == '"')
@@ -119,13 +120,13 @@ void befunge_transpile(const char *input_body, const ZApi *api)
                 }
                 else if (op == '/')
                 {
-                    fprintf(out,
-                            "    { long a=stack[--sp]; stack[sp-1]= (a!=0)?stack[sp-1]/a:0; }\n");
+                    fprintf(out, "    { long a=stack[--sp]; stack[sp-1]= "
+                                 "(a!=0)?stack[sp-1]/a:0; }\n");
                 }
                 else if (op == '%')
                 {
-                    fprintf(out,
-                            "    { long a=stack[--sp]; stack[sp-1]= (a!=0)?stack[sp-1]%%a:0; }\n");
+                    fprintf(out, "    { long a=stack[--sp]; stack[sp-1]= "
+                                 "(a!=0)?stack[sp-1]%%a:0; }\n");
                 }
                 else if (op == '!')
                 {

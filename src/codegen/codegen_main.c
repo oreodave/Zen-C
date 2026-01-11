@@ -1,10 +1,10 @@
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include "codegen.h"
-#include "../zprep.h"
 #include "../ast/ast.h"
+#include "../zprep.h"
+#include "codegen.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 // Helper: Check if a struct depends on another struct/enum by-value.
 static int struct_depends_on(ASTNode *s1, const char *target_name)
@@ -191,7 +191,8 @@ void codegen_node(ParserContext *ctx, ASTNode *node, FILE *out)
     if (node->type == NODE_ROOT)
     {
         ASTNode *kids = node->root.children;
-        // Recursive Unwrap of Nested Roots (if accidentally wrapped multiple times).
+        // Recursive Unwrap of Nested Roots (if accidentally wrapped multiple
+        // times).
         while (kids && kids->type == NODE_ROOT)
         {
             kids = kids->root.children;

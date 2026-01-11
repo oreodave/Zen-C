@@ -1,10 +1,10 @@
 
+#include "../ast/ast.h"
+#include "parser.h"
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
-#include "parser.h"
-#include "../ast/ast.h"
 
 Type *parse_type_base(ParserContext *ctx, Lexer *l)
 {
@@ -252,7 +252,8 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
             if (si)
             {
                 // This is a selectively imported symbol
-                // Resolve to the actual struct name which was prefixed during module parsing
+                // Resolve to the actual struct name which was prefixed during module
+                // parsing
                 free(name);
                 name = xmalloc(strlen(si->source_module) + strlen(si->symbol) + 2);
                 sprintf(name, "%s_%s", si->source_module, si->symbol);
@@ -262,7 +263,8 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
         // If we're IN a module and no selective import matched, apply module prefix
         if (ctx->current_module_prefix && !is_known_generic(ctx, name))
         {
-            // Auto-prefix struct name if in module context (unless it's a known primitive/generic)
+            // Auto-prefix struct name if in module context (unless it's a known
+            // primitive/generic)
             char *prefixed_name = xmalloc(strlen(ctx->current_module_prefix) + strlen(name) + 2);
             sprintf(prefixed_name, "%s_%s", ctx->current_module_prefix, name);
             free(name);
@@ -278,7 +280,8 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
             lexer_next(l); // eat <
             Type *arg = parse_type_formal(ctx, l);
 
-            // Handle nested generics like Vec<Vec<int>> where >> is tokenized as one op
+            // Handle nested generics like Vec<Vec<int>> where >> is tokenized as one
+            // op
             Token next_tok = lexer_peek(l);
             if (next_tok.type == TOK_RANGLE)
             {

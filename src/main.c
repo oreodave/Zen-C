@@ -1,12 +1,12 @@
+#include "codegen/codegen.h"
+#include "parser/parser.h"
+#include "plugins/plugin_manager.h"
+#include "repl/repl.h"
+#include "zprep.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "zprep.h"
-#include "parser/parser.h"
-#include "codegen/codegen.h"
-#include "repl/repl.h"
-#include "plugins/plugin_manager.h"
 
 // Forward decl for LSP
 int lsp_main(int argc, char **argv);
@@ -79,8 +79,8 @@ int main(int argc, char **argv)
     }
     else if (command[0] == '-')
     {
-        // implicit build or run? assume build if starts with flag, but usually command first
-        // If file provided directly: "zc file.zc" -> build
+        // implicit build or run? assume build if starts with flag, but usually
+        // command first If file provided directly: "zc file.zc" -> build
         if (strchr(command, '.'))
         {
             // treat as filename
@@ -234,7 +234,8 @@ int main(int argc, char **argv)
     }
 
     // Checking mode?
-    // analyze(root); // Implicit in parsing or separate step? Assuming separate if check_mode
+    // analyze(root); // Implicit in parsing or separate step? Assuming separate
+    // if check_mode
 
     if (g_config.mode_check)
     {

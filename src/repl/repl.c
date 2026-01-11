@@ -1,11 +1,11 @@
 
+#include "repl.h"
+#include "ast.h"
+#include "parser/parser.h"
+#include "zprep.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "repl.h"
-#include "zprep.h"
-#include "ast.h"
-#include "parser/parser.h"
 
 ASTNode *parse_program(ParserContext *ctx, Lexer *l);
 
@@ -819,8 +819,10 @@ void run_repl(const char *self_path)
                         fclose(f);
                         char cmd[2048];
                         sprintf(cmd,
-                                "%s build -q --emit-c -o /tmp/zprep_repl_out %s 2>/dev/null; sed "
-                                "-n '/^int main() {$/,/^}$/p' /tmp/zprep_repl_out.c 2>/dev/null | "
+                                "%s build -q --emit-c -o /tmp/zprep_repl_out %s "
+                                "2>/dev/null; sed "
+                                "-n '/^int main() {$/,/^}$/p' /tmp/zprep_repl_out.c "
+                                "2>/dev/null | "
                                 "tail -n +3 | head -n -2 | sed 's/^    //'",
                                 self_path, tmp_path);
                         system(cmd);
@@ -892,13 +894,15 @@ void run_repl(const char *self_path)
                         const char *name;
                         const char *doc;
                     } docs[] = {
-                        {"Vec",
-                         "Vec<T> - Dynamic array (generic)\n  Fields: data: T*, len: usize, cap: "
-                         "usize\n  Methods: new, push, pop, get, set, insert, remove, contains, "
-                         "clear, free, clone, reverse, first, last, length, is_empty, eq"},
+                        {"Vec", "Vec<T> - Dynamic array (generic)\n  Fields: data: T*, "
+                                "len: usize, cap: "
+                                "usize\n  Methods: new, push, pop, get, set, insert, "
+                                "remove, contains, "
+                                "clear, free, clone, reverse, first, last, length, "
+                                "is_empty, eq"},
                         {"Vec.new", "fn Vec<T>::new() -> Vec<T>\n  Creates an empty vector."},
-                        {"Vec.push",
-                         "fn push(self, item: T)\n  Appends item to the end. Auto-grows capacity."},
+                        {"Vec.push", "fn push(self, item: T)\n  Appends item to the end. "
+                                     "Auto-grows capacity."},
                         {"Vec.pop", "fn pop(self) -> T\n  Removes and returns the last element. "
                                     "Panics if empty."},
                         {"Vec.get", "fn get(self, idx: usize) -> T\n  Returns element at index. "
@@ -915,16 +919,17 @@ void run_repl(const char *self_path)
                         {"Vec.free", "fn free(self)\n  Frees memory. Sets data to null."},
                         {"Vec.clone", "fn clone(self) -> Vec<T>\n  Returns a shallow copy."},
                         {"Vec.reverse", "fn reverse(self)\n  Reverses elements in place."},
-                        {"Vec.first",
-                         "fn first(self) -> T\n  Returns first element. Panics if empty."},
+                        {"Vec.first", "fn first(self) -> T\n  Returns first element. "
+                                      "Panics if empty."},
                         {"Vec.last",
                          "fn last(self) -> T\n  Returns last element. Panics if empty."},
                         {"Vec.length", "fn length(self) -> usize\n  Returns number of elements."},
                         {"Vec.is_empty",
                          "fn is_empty(self) -> bool\n  Returns true if length is 0."},
-                        {"String",
-                         "String - Mutable string (alias for char*)\n  Methods: len, split, trim, "
-                         "contains, starts_with, ends_with, to_upper, to_lower, substring, find"},
+                        {"String", "String - Mutable string (alias for char*)\n  "
+                                   "Methods: len, split, trim, "
+                                   "contains, starts_with, ends_with, to_upper, "
+                                   "to_lower, substring, find"},
                         {"String.len", "fn len(self) -> usize\n  Returns string length."},
                         {"String.contains", "fn contains(self, substr: string) -> bool\n  Returns "
                                             "true if string contains substr."},
@@ -938,19 +943,20 @@ void run_repl(const char *self_path)
                                         "substr, or -1 if not found."},
                         {"println", "println \"format string {expr}\"\n  Prints to stdout with "
                                     "newline. Auto-formats {expr} values."},
-                        {"print",
-                         "print \"format string {expr}\"\n  Prints to stdout without newline."},
+                        {"print", "print \"format string {expr}\"\n  Prints to stdout "
+                                  "without newline."},
                         {"eprintln",
                          "eprintln \"format string\"\n  Prints to stderr with newline."},
                         {"eprint", "eprint \"format string\"\n  Prints to stderr without newline."},
-                        {"guard",
-                         "guard condition else action\n  Early exit pattern. Executes action if "
-                         "condition is false.\n  Example: guard ptr != NULL else return;"},
+                        {"guard", "guard condition else action\n  Early exit pattern. "
+                                  "Executes action if "
+                                  "condition is false.\n  Example: guard ptr != NULL "
+                                  "else return;"},
                         {"defer", "defer statement\n  Executes statement at end of scope.\n  "
                                   "Example: defer free(ptr);"},
                         {"sizeof", "sizeof(type) or sizeof(expr)\n  Returns size in bytes."},
-                        {"typeof",
-                         "typeof(expr)\n  Returns the type of expression (compile-time)."},
+                        {"typeof", "typeof(expr)\n  Returns the type of expression "
+                                   "(compile-time)."},
                         {"malloc", "void *malloc(size_t size)\n  Allocates size bytes. Returns "
                                    "pointer or NULL. Free with free()."},
                         {"free", "void free(void *ptr)\n  Frees memory allocated by "
@@ -963,16 +969,16 @@ void run_repl(const char *self_path)
                                    "n bytes from src to dest. Returns dest. No overlap."},
                         {"memmove", "void *memmove(void *dest, const void *src, size_t n)\n  "
                                     "Copies n bytes, handles overlapping regions."},
-                        {"memset",
-                         "void *memset(void *s, int c, size_t n)\n  Sets n bytes of s to value c."},
+                        {"memset", "void *memset(void *s, int c, size_t n)\n  Sets n "
+                                   "bytes of s to value c."},
                         {"strlen", "size_t strlen(const char *s)\n  Returns length of string (not "
                                    "including null terminator)."},
                         {"strcpy", "char *strcpy(char *dest, const char *src)\n  Copies src to "
                                    "dest including null terminator. No bounds check."},
                         {"strncpy", "char *strncpy(char *dest, const char *src, size_t n)\n  "
                                     "Copies up to n chars. May not null-terminate."},
-                        {"strcat",
-                         "char *strcat(char *dest, const char *src)\n  Appends src to dest."},
+                        {"strcat", "char *strcat(char *dest, const char *src)\n  Appends "
+                                   "src to dest."},
                         {"strcmp", "int strcmp(const char *s1, const char *s2)\n  Compares "
                                    "strings. Returns 0 if equal, <0 or >0 otherwise."},
                         {"strncmp", "int strncmp(const char *s1, const char *s2, size_t n)\n  "
@@ -991,11 +997,11 @@ void run_repl(const char *self_path)
                                      "Safe sprintf with size limit."},
                         {"fprintf", "int fprintf(FILE *f, const char *fmt, ...)\n  Prints "
                                     "formatted output to file stream."},
-                        {"scanf",
-                         "int scanf(const char *fmt, ...)\n  Reads formatted input from stdin."},
-                        {"fopen",
-                         "FILE *fopen(const char *path, const char *mode)\n  Opens file. Modes: "
-                         "\"r\", \"w\", \"a\", \"rb\", \"wb\". Returns NULL on error."},
+                        {"scanf", "int scanf(const char *fmt, ...)\n  Reads formatted "
+                                  "input from stdin."},
+                        {"fopen", "FILE *fopen(const char *path, const char *mode)\n  Opens file. "
+                                  "Modes: "
+                                  "\"r\", \"w\", \"a\", \"rb\", \"wb\". Returns NULL on error."},
                         {"fclose", "int fclose(FILE *f)\n  Closes file. Returns 0 on success."},
                         {"fread", "size_t fread(void *ptr, size_t size, size_t n, FILE *f)\n  "
                                   "Reads n items of size bytes. Returns items read."},
@@ -1005,15 +1011,16 @@ void run_repl(const char *self_path)
                                   "chars. Includes newline. Returns s or NULL."},
                         {"fputs", "int fputs(const char *s, FILE *f)\n  Writes string to file. "
                                   "Returns non-negative or EOF."},
-                        {"exit", "void exit(int status)\n  Terminates program with status code. 0 "
+                        {"exit", "void exit(int status)\n  Terminates program with "
+                                 "status code. 0 "
                                  "= success."},
-                        {"atoi",
-                         "int atoi(const char *s)\n  Converts string to int. Returns 0 on error."},
+                        {"atoi", "int atoi(const char *s)\n  Converts string to int. "
+                                 "Returns 0 on error."},
                         {"atof", "double atof(const char *s)\n  Converts string to double."},
                         {"abs", "int abs(int n)\n  Returns absolute value."},
                         {"rand", "int rand(void)\n  Returns pseudo-random int in [0, RAND_MAX]."},
-                        {"srand",
-                         "void srand(unsigned seed)\n  Seeds the random number generator."},
+                        {"srand", "void srand(unsigned seed)\n  Seeds the random number "
+                                  "generator."},
                         {"qsort", "void qsort(void *base, size_t n, size_t size, int(*cmp)(const "
                                   "void*, const void*))\n  Quicksorts array in-place."},
                         {NULL, NULL}};
@@ -1033,7 +1040,8 @@ void run_repl(const char *self_path)
                         // Fallback: try man pages, show only SYNOPSIS.
                         char man_cmd[256];
                         sprintf(man_cmd,
-                                "man 3 %s 2>/dev/null | sed -n '/^SYNOPSIS/,/^[A-Z]/p' | head -10",
+                                "man 3 %s 2>/dev/null | sed -n '/^SYNOPSIS/,/^[A-Z]/p' | "
+                                "head -10",
                                 sym);
                         FILE *mp = popen(man_cmd, "r");
                         if (mp)
@@ -1197,10 +1205,10 @@ void run_repl(const char *self_path)
             {
                 // Use printf for label, then print "{expr}" for value.
                 char wbuf[1024];
-                sprintf(
-                    wbuf,
-                    "printf(\"\\033[90mwatch:%s = \\033[0m\"); print \"{%s}\"; printf(\"\\n\"); ",
-                    watches[i], watches[i]);
+                sprintf(wbuf,
+                        "printf(\"\\033[90mwatch:%s = \\033[0m\"); print \"{%s}\"; "
+                        "printf(\"\\n\"); ",
+                        watches[i], watches[i]);
                 strcat(full_code, wbuf);
             }
         }

@@ -2,10 +2,10 @@
 #ifndef CODEGEN_H
 #define CODEGEN_H
 
-#include <stdio.h>
-#include "../zprep.h"
 #include "../ast/ast.h"
 #include "../parser/parser.h"
+#include "../zprep.h"
+#include <stdio.h>
 
 // Main codegen entry points.
 void codegen_node(ParserContext *ctx, ASTNode *node, FILE *out);

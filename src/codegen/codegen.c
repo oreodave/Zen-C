@@ -1,10 +1,10 @@
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <ctype.h>
 #include "codegen.h"
 #include "zprep.h"
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "../plugins/plugin_manager.h"
 #include "ast.h"
@@ -436,7 +436,9 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
     case NODE_LAMBDA:
         if (node->lambda.num_captures > 0)
         {
-            fprintf(out, "({ struct Lambda_%d_Ctx *ctx = malloc(sizeof(struct Lambda_%d_Ctx));\n",
+            fprintf(out,
+                    "({ struct Lambda_%d_Ctx *ctx = malloc(sizeof(struct "
+                    "Lambda_%d_Ctx));\n",
                     node->lambda.lambda_id, node->lambda.lambda_id);
             for (int i = 0; i < node->lambda.num_captures; i++)
             {
@@ -818,7 +820,9 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
 
         if (is_slice_struct)
         {
-            fprintf(out, "(Slice_%s){ .data = _arr.data + _start, .len = _len, .cap = _len }; })",
+            fprintf(out,
+                    "(Slice_%s){ .data = _arr.data + _start, .len = _len, .cap = "
+                    "_len }; })",
                     tname);
         }
         else
@@ -863,7 +867,8 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         fprintf(out, " _try = ");
         codegen_expression(ctx, node->try_stmt.expr, out);
         fprintf(out,
-                "; if (_try.tag == %s_Err_Tag) return (%s_Err(_try.data.Err)); _try.data.Ok; })",
+                "; if (_try.tag == %s_Err_Tag) return (%s_Err(_try.data.Err)); "
+                "_try.data.Ok; })",
                 type_name, type_name);
         break;
     }
@@ -1901,7 +1906,8 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
         emit_auto_type(ctx, node->repl_print.expr, node->token, out);
         fprintf(out, " _zval = (");
         codegen_expression(ctx, node->repl_print.expr, out);
-        fprintf(out, "); fprintf(stdout, _z_str(_zval), _zval); fprintf(stdout, \"\\n\"); }\n");
+        fprintf(out, "); fprintf(stdout, _z_str(_zval), _zval); fprintf(stdout, "
+                     "\"\\n\"); }\n");
         break;
     }
     case NODE_AWAIT:
@@ -1922,8 +1928,8 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
             ret_type = node->resolved_type;
         }
 
-        // Fallback: If type is still Async/void* (likely from Future type, not Result type), try to
-        // infer
+        // Fallback: If type is still Async/void* (likely from Future type, not
+        // Result type), try to infer
         if (strcmp(ret_type, "Async") == 0 || strcmp(ret_type, "void*") == 0)
         {
             char *inf = infer_type(ctx, node);

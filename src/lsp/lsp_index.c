@@ -1,8 +1,8 @@
 
+#include "lsp_index.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "lsp_index.h"
 
 LSPIndex *lsp_index_new()
 {

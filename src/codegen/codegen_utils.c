@@ -1,12 +1,12 @@
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include "codegen.h"
-#include "../zprep.h"
 #include "../ast/ast.h"
 #include "../parser/parser.h"
+#include "../zprep.h"
+#include "codegen.h"
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 // Global state
 ASTNode *global_user_structs = NULL;
@@ -44,7 +44,7 @@ ASTNode *find_struct_def_codegen(ParserContext *ctx, const char *name)
     ASTNode *s = global_user_structs;
     while (s)
     {
-        if (s->type == NODE_STRUCT && strcmp(s->strct.name, name) == 0)
+        if (s->type == NODE_STRUCT && strcmp(s->strct.name, name) == 0 && !s->strct.is_incomplete)
         {
             return s;
         }
@@ -55,7 +55,8 @@ ASTNode *find_struct_def_codegen(ParserContext *ctx, const char *name)
     StructRef *sr = ctx->parsed_structs_list;
     while (sr)
     {
-        if (sr->node && sr->node->type == NODE_STRUCT && strcmp(sr->node->strct.name, name) == 0)
+        if (sr->node && sr->node->type == NODE_STRUCT && strcmp(sr->node->strct.name, name) == 0 &&
+            !sr->node->strct.is_incomplete)
         {
             return sr->node;
         }
@@ -64,7 +65,7 @@ ASTNode *find_struct_def_codegen(ParserContext *ctx, const char *name)
     s = ctx->instantiated_structs;
     while (s)
     {
-        if (s->type == NODE_STRUCT && strcmp(s->strct.name, name) == 0)
+        if (s->type == NODE_STRUCT && strcmp(s->strct.name, name) == 0 && !s->strct.is_incomplete)
         {
             return s;
         }

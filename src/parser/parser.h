@@ -114,6 +114,8 @@ typedef struct VarMutability
 typedef struct Instantiation
 {
     char *name;
+    char *template_name;
+    char *concrete_arg;
     ASTNode *struct_node;
     struct Instantiation *next;
 } Instantiation;
@@ -286,7 +288,8 @@ void add_symbol_with_token(ParserContext *ctx, const char *n, const char *t, Typ
 Type *find_symbol_type_info(ParserContext *ctx, const char *n);
 char *find_symbol_type(ParserContext *ctx, const char *n);
 Symbol *find_symbol_entry(ParserContext *ctx, const char *n);
-Symbol *find_symbol_in_all(ParserContext *ctx, const char *n); // LSP flat lookup
+Symbol *find_symbol_in_all(ParserContext *ctx,
+                           const char *n); // LSP flat lookup
 char *find_similar_symbol(ParserContext *ctx, const char *name);
 
 // Function registry

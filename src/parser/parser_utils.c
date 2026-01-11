@@ -1,10 +1,13 @@
 
+#include "../codegen/codegen.h"
+#include "parser.h"
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
-#include "parser.h"
-#include "../codegen/codegen.h"
+
+void instantiate_methods(ParserContext *ctx, GenericImplTemplate *it,
+                         const char *mangled_struct_name, const char *arg);
 
 Token expect(Lexer *l, TokenType type, const char *msg)
 {
@@ -376,6 +379,18 @@ void register_impl_template(ParserContext *ctx, const char *sname, const char *p
     t->impl_node = node;
     t->next = ctx->impl_templates;
     ctx->impl_templates = t;
+
+    // Late binding: Check if any existing instantiations match this new impl
+    // template
+    Instantiation *inst = ctx->instantiations;
+    while (inst)
+    {
+        if (inst->template_name && strcmp(inst->template_name, sname) == 0)
+        {
+            instantiate_methods(ctx, t, inst->name, inst->concrete_arg);
+        }
+        inst = inst->next;
+    }
 }
 
 void add_to_struct_list(ParserContext *ctx, ASTNode *node)
@@ -917,7 +932,8 @@ char *replace_type_str(const char *src, const char *param, const char *concrete,
         size_t plen = strlen(suffix);
         if (slen > plen && strcmp(src + slen - plen, suffix) == 0)
         {
-            // Ends with _T -> Replace suffix with _int (sanitize for pointers like JsonValue*)
+            // Ends with _T -> Replace suffix with _int (sanitize for pointers like
+            // JsonValue*)
             char *clean_concrete = sanitize_mangled_name(concrete);
             char *ret = xmalloc(slen - plen + strlen(clean_concrete) + 2);
             strncpy(ret, src, slen - plen);
@@ -1145,7 +1161,8 @@ Type *replace_type_formal(Type *t, const char *p, const char *c, const char *os,
     return n;
 }
 
-// Helper to replace generic params in mangled names (e.g. Option_V_None -> Option_int_None)
+// Helper to replace generic params in mangled names (e.g. Option_V_None ->
+// Option_int_None)
 char *replace_mangled_part(const char *src, const char *param, const char *concrete)
 {
     if (!src || !param || !concrete)
@@ -1165,8 +1182,8 @@ char *replace_mangled_part(const char *src, const char *param, const char *concr
         // Check if param matches here
         if (strncmp(curr, param, plen) == 0)
         {
-            // Check boundaries: Must be delimited by quoted boundaries, OR underscores, OR string
-            // ends
+            // Check boundaries: Must be delimited by quoted boundaries, OR
+            // underscores, OR string ends
             int valid = 1;
 
             // Check Prev: Start of string OR Underscore
@@ -1631,7 +1648,8 @@ ASTNode *copy_fields_replacing(ParserContext *ctx, ASTNode *fields, const char *
 
     if (n->field.type && strchr(n->field.type, '_'))
     {
-        // Parse potential generic: e.g. "MapEntry_int" -> instantiate("MapEntry", "int")
+        // Parse potential generic: e.g. "MapEntry_int" -> instantiate("MapEntry",
+        // "int")
         char *underscore = strrchr(n->field.type, '_');
         if (underscore && underscore > n->field.type)
         {
@@ -1674,6 +1692,67 @@ ASTNode *copy_fields_replacing(ParserContext *ctx, ASTNode *fields, const char *
 
     n->next = copy_fields_replacing(ctx, fields->next, param, concrete);
     return n;
+}
+
+void instantiate_methods(ParserContext *ctx, GenericImplTemplate *it,
+                         const char *mangled_struct_name, const char *arg)
+{
+    if (check_impl(ctx, "Methods", mangled_struct_name))
+    {
+        return; // Simple dedupe check
+    }
+
+    ASTNode *backup_next = it->impl_node->next;
+    it->impl_node->next = NULL; // Break link to isolate node
+    ASTNode *new_impl = copy_ast_replacing(it->impl_node, it->generic_param, arg, it->struct_name,
+                                           mangled_struct_name);
+    it->impl_node->next = backup_next; // Restore
+
+    new_impl->impl.struct_name = xstrdup(mangled_struct_name);
+    ASTNode *meth = new_impl->impl.methods;
+    while (meth)
+    {
+        char *suffix = strchr(meth->func.name, '_');
+        if (suffix)
+        {
+            char *new_name = xmalloc(strlen(mangled_struct_name) + strlen(suffix) + 1);
+            sprintf(new_name, "%s%s", mangled_struct_name, suffix);
+            free(meth->func.name);
+            meth->func.name = new_name;
+            register_func(ctx, new_name, meth->func.arg_count, meth->func.defaults,
+                          meth->func.arg_types, meth->func.ret_type_info, meth->func.is_varargs, 0,
+                          meth->token);
+        }
+
+        // Handle generic return types in methods (e.g., Option<T> -> Option_int)
+        if (meth->func.ret_type && strchr(meth->func.ret_type, '_'))
+        {
+            char *ret_copy = xstrdup(meth->func.ret_type);
+            char *underscore = strrchr(ret_copy, '_');
+            if (underscore && underscore > ret_copy)
+            {
+                *underscore = '\0';
+                char *template_name = ret_copy;
+
+                // Check if this looks like a generic (e.g., "Option_V" or "Result_V")
+                GenericTemplate *gt = ctx->templates;
+                while (gt)
+                {
+                    if (strcmp(gt->name, template_name) == 0)
+                    {
+                        // Found matching template, instantiate it
+                        instantiate_generic(ctx, template_name, arg);
+                        break;
+                    }
+                    gt = gt->next;
+                }
+            }
+            free(ret_copy);
+        }
+
+        meth = meth->next;
+    }
+    add_instantiated_func(ctx, new_impl);
 }
 
 void instantiate_generic(ParserContext *ctx, const char *tpl, const char *arg)
@@ -1719,6 +1798,8 @@ void instantiate_generic(ParserContext *ctx, const char *tpl, const char *arg)
 
     Instantiation *ni = xmalloc(sizeof(Instantiation));
     ni->name = xstrdup(m);
+    ni->template_name = xstrdup(tpl);
+    ni->concrete_arg = xstrdup(arg);
     ni->struct_node = NULL; // Placeholder to break cycles
     ni->next = ctx->instantiations;
     ctx->instantiations = ni;
@@ -1780,55 +1861,7 @@ void instantiate_generic(ParserContext *ctx, const char *tpl, const char *arg)
     {
         if (strcmp(it->struct_name, tpl) == 0)
         {
-            ASTNode *backup_next = it->impl_node->next;
-            it->impl_node->next = NULL; // Break link to isolate node
-            ASTNode *new_impl = copy_ast_replacing(it->impl_node, it->generic_param, arg, tpl, m);
-            it->impl_node->next = backup_next; // Restore
-
-            new_impl->impl.struct_name = xstrdup(m);
-            ASTNode *meth = new_impl->impl.methods;
-            while (meth)
-            {
-                char *suffix = strchr(meth->func.name, '_');
-                if (suffix)
-                {
-                    char *new_name = xmalloc(strlen(m) + strlen(suffix) + 1);
-                    sprintf(new_name, "%s%s", m, suffix);
-                    free(meth->func.name);
-                    meth->func.name = new_name;
-                    register_func(ctx, new_name, meth->func.arg_count, meth->func.defaults,
-                                  meth->func.arg_types, meth->func.ret_type_info,
-                                  meth->func.is_varargs, 0, meth->token);
-                }
-
-                if (meth->func.ret_type && strchr(meth->func.ret_type, '_'))
-                {
-                    char *ret_copy = xstrdup(meth->func.ret_type);
-                    char *underscore = strrchr(ret_copy, '_');
-                    if (underscore && underscore > ret_copy)
-                    {
-                        *underscore = '\0';
-                        char *template_name = ret_copy;
-
-                        // Check if this looks like a generic (e.g., "Option_V" or "Result_V")
-                        GenericTemplate *gt = ctx->templates;
-                        while (gt)
-                        {
-                            if (strcmp(gt->name, template_name) == 0)
-                            {
-                                // Found matching template, instantiate it
-                                instantiate_generic(ctx, template_name, arg);
-                                break;
-                            }
-                            gt = gt->next;
-                        }
-                    }
-                    free(ret_copy);
-                }
-
-                meth = meth->next;
-            }
-            add_instantiated_func(ctx, new_impl);
+            instantiate_methods(ctx, it, m, arg);
         }
         it = it->next;
     }

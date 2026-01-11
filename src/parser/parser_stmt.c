@@ -1,13 +1,13 @@
-// parser_stmt.c - Statement and Declaration parsing
+
+#include "parser.h"
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 #include <unistd.h>
-#include "parser.h"
 
-#include "../plugins/plugin_manager.h"
 #include "../ast/ast.h"
+#include "../plugins/plugin_manager.h"
 #include "../zen/zen_facts.h"
 #include "zprep_plugin.h"
 
@@ -83,7 +83,8 @@ ASTNode *parse_function(ParserContext *ctx, Lexer *l, int is_async)
     curr_func_ret = ret;
 
     // Auto-prefix function name if in module context
-    // Don't prefix generic templates or functions inside impl blocks (already mangled)
+    // Don't prefix generic templates or functions inside impl blocks (already
+    // mangled)
     if (ctx->current_module_prefix && !gen_param && !ctx->current_impl_struct)
     {
         char *prefixed_name = xmalloc(strlen(ctx->current_module_prefix) + strlen(name) + 2);
@@ -111,8 +112,8 @@ ASTNode *parse_function(ParserContext *ctx, Lexer *l, int is_async)
     }
 
     // Check for unused parameters
-    // The current scope contains arguments (since parse_block creates a new child scope for body)
-    // Only check if we parsed a body (not a prototype) function
+    // The current scope contains arguments (since parse_block creates a new child
+    // scope for body) Only check if we parsed a body (not a prototype) function
     if (body && ctx->current_scope)
     {
         Symbol *sym = ctx->current_scope->symbols;
@@ -1168,8 +1169,9 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l)
                 type_obj->name = xstrdup(type);
             }
 
-            // fprintf(stderr, "DEBUG PVarDecl: Var '%s' inferred type '%s' (init->type_info
-            // present: %d)\n", name, type, init && init->type_info ? 1 : 0);
+            // fprintf(stderr, "DEBUG PVarDecl: Var '%s' inferred type '%s'
+            // (init->type_info present: %d)\n", name, type, init && init->type_info ?
+            // 1 : 0);
         }
     }
 
@@ -1372,7 +1374,8 @@ ASTNode *parse_return(ParserContext *ctx, Lexer *l)
     int handled = 0;
 
     // 1. Check for Tuple Literal Return: return (a, b);
-    // Condition: Function returns Tuple_..., starts with '(', and contains ',' at top level
+    // Condition: Function returns Tuple_..., starts with '(', and contains ',' at
+    // top level
     if (curr_func_ret && strncmp(curr_func_ret, "Tuple_", 6) == 0 &&
         lexer_peek(l).type == TOK_LPAREN)
     {
@@ -1409,7 +1412,8 @@ ASTNode *parse_return(ParserContext *ctx, Lexer *l)
                 }
             }
 
-            // If we find a comma at depth 1 (inside the first parens), it's a tuple literal!
+            // If we find a comma at depth 1 (inside the first parens), it's a tuple
+            // literal!
             if (depth == 1 && t.type == TOK_COMMA)
             {
                 is_tuple_lit = 1;
@@ -1772,7 +1776,8 @@ char *process_printf_sugar(ParserContext *ctx, const char *content, int newline,
             clean_expr++; // Skip leading spaces
         }
 
-        // Mark the variable as used (fixes "Unused variable" warnings for f-string interpolation)
+        // Mark the variable as used (fixes "Unused variable" warnings for f-string
+        // interpolation)
         Symbol *sym = find_symbol_entry(ctx, clean_expr);
         if (sym)
         {
@@ -1806,7 +1811,8 @@ char *process_printf_sugar(ParserContext *ctx, const char *content, int newline,
         }
         // ============================================================
 
-        // Rewrite the expression to handle pointer access (header_ptr.magic -> header_ptr->magic)
+        // Rewrite the expression to handle pointer access (header_ptr.magic ->
+        // header_ptr->magic)
         char *wrapped_expr = xmalloc(strlen(expr) + 5);
         sprintf(wrapped_expr, "#{%s}", expr);
         char *rw_expr = rewrite_expr_methods(ctx, wrapped_expr);
@@ -2672,9 +2678,9 @@ ASTNode *parse_trait(ParserContext *ctx, Lexer *l)
 
         // Parse method signature: fn name(args...) -> ret;
         // Re-use parse_function but stop at semicolon?
-        // Actually trait methods might have default impls later, but for now just signatures.
-        // Let's parse full function but body might be empty/null?
-        // Or simpler: just parse signature manually.
+        // Actually trait methods might have default impls later, but for now just
+        // signatures. Let's parse full function but body might be empty/null? Or
+        // simpler: just parse signature manually.
 
         Token ft = lexer_next(l);
         if (ft.type != TOK_IDENT || strncmp(ft.start, "fn", 2) != 0)
@@ -2995,8 +3001,8 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                     free(f->func.args);
                     f->func.args = na;
 
-                    // FIX: Register the MANGLED name so calls like String_from(...) find the return
-                    // type
+                    // FIX: Register the MANGLED name so calls like String_from(...) find
+                    // the return type
                     register_func(ctx, mangled, f->func.arg_count, f->func.defaults,
                                   f->func.arg_types, f->func.ret_type_info, f->func.is_varargs, 0,
                                   f->token);
@@ -3077,6 +3083,25 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union)
         register_generic(ctx, name);
     }
 
+    // Check for prototype (forward declaration)
+    if (lexer_peek(l).type == TOK_SEMICOLON)
+    {
+        lexer_next(l);
+        ASTNode *n = ast_create(NODE_STRUCT);
+        n->strct.name = name;
+        n->strct.is_template = (gp != NULL);
+        n->strct.generic_param = gp;
+        n->strct.is_union = is_union;
+        n->strct.fields = NULL;
+        n->strct.is_incomplete = 1;
+
+        if (!gp)
+        {
+            add_to_struct_list(ctx, n);
+        }
+        return n;
+    }
+
     lexer_next(l); // eat {
     ASTNode *h = 0, *tl = 0;
 
@@ -3139,10 +3164,11 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union)
             }
             else
             {
-                // If definition not found (e.g. user struct defined later), we can't embed fields
-                // yet. Compiler limitation: 'use' requires struct to be defined before. Fallback:
-                // Emit a placeholder field so compilation doesn't crash, but layout will be wrong.
-                // printf("Warning: Could not find struct '%s' for embedding.\n", use_name);
+                // If definition not found (e.g. user struct defined later), we can't
+                // embed fields yet. Compiler limitation: 'use' requires struct to be
+                // defined before. Fallback: Emit a placeholder field so compilation
+                // doesn't crash, but layout will be wrong. printf("Warning: Could not
+                // find struct '%s' for embedding.\n", use_name);
             }
             free(use_name);
             continue;
@@ -3528,7 +3554,9 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
     Token t = lexer_next(l);
     if (t.type != TOK_STRING)
     {
-        zpanic("Expected string (filename) after 'from' in selective import, got type %d", t.type);
+        zpanic("Expected string (filename) after 'from' in selective import, got "
+               "type %d",
+               t.type);
     }
     int ln = t.len - 2; // Remove quotes
     char *fn = xmalloc(ln + 1);
@@ -3648,9 +3676,10 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
     // C Header: Emit include and return (don't parse)
     if (strlen(fn) > 2 && strcmp(fn + strlen(fn) - 2, ".h") == 0)
     {
-        // We can iterate over registered modules to check if we missed setting is_c_header?
-        // But we handled 'as' above. If no 'as', we need to check if we should register it?
-        // Usually 'import "foo.h" as f' is required for namespacing.
+        // We can iterate over registered modules to check if we missed setting
+        // is_c_header? But we handled 'as' above. If no 'as', we need to check if
+        // we should register it? Usually 'import "foo.h" as f' is required for
+        // namespacing.
 
         // Emit #include
         // TODO: Where to emit? parser doesn't emit code usually.
@@ -3726,7 +3755,8 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
     }
 
     if (module_base_name)
-    { // This was only used for selective import registration, not for ctx->current_module_prefix
+    { // This was only used for selective import
+      // registration, not for ctx->current_module_prefix
         free(module_base_name);
     }
 
@@ -3776,12 +3806,13 @@ ASTNode *parse_comptime(ParserContext *ctx, Lexer *l)
 
     // Stdout capture wrapper
     // We assume the user writes C code that fits in main(), or includes headers.
-    // For simplicity V1: We provide standard headers and wrap content in main if it doesn't look
-    // like definitions? Actually failure mode: User defines functions. Better: User provides body
-    // of main() or definitions. Heuristic: If we wrap in main, we can't define functions inside
-    // main (standard C). Proposal: User code runs AS IS. User must provide main(). Wait, user
-    // example: printf("..."); If I just paste printf("..."), it needs a main. Let's wrap in main()
-    // by default.
+    // For simplicity V1: We provide standard headers and wrap content in main if
+    // it doesn't look like definitions? Actually failure mode: User defines
+    // functions. Better: User provides body of main() or definitions. Heuristic:
+    // If we wrap in main, we can't define functions inside main (standard C).
+    // Proposal: User code runs AS IS. User must provide main(). Wait, user
+    // example: printf("..."); If I just paste printf("..."), it needs a main.
+    // Let's wrap in main() by default.
     fprintf(f, "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n");
     fprintf(f, "int main() {\n%s\nreturn 0;\n}\n", code);
     fclose(f);
@@ -3832,8 +3863,8 @@ ASTNode *parse_comptime(ParserContext *ctx, Lexer *l)
     // 6. Parse Output (Recursively)
     Lexer new_l;
     lexer_init(&new_l, output_src);
-    // Note: Recursive call. We leak output_src intentionally so AST tokens remain valid.
-    // In a long running process we would manage this in an Arena.
+    // Note: Recursive call. We leak output_src intentionally so AST tokens remain
+    // valid. In a long running process we would manage this in an Arena.
     return parse_program_nodes(ctx, &new_l);
 }
 

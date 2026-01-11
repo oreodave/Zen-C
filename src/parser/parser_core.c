@@ -1,9 +1,9 @@
 
+#include "parser.h"
+#include "zprep.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "parser.h"
-#include "zprep.h"
 
 static ASTNode *generate_derive_impls(ParserContext *ctx, ASTNode *strct, char **traits, int count);
 
