@@ -2150,6 +2150,44 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
     {
         return parse_test(ctx, l);
     }
+    if (tk.type == TOK_COMPTIME)
+    {
+        char *src = run_comptime_block(ctx, l);
+        Lexer new_l;
+        lexer_init(&new_l, src);
+        ASTNode *head = NULL, *tail = NULL;
+
+        while (lexer_peek(&new_l).type != TOK_EOF)
+        {
+            ASTNode *s = parse_statement(ctx, &new_l);
+            if (!s)
+            {
+                break;
+            }
+            if (!head)
+            {
+                head = s;
+            }
+            else
+            {
+                tail->next = s;
+            }
+            tail = s;
+            while (tail->next)
+            {
+                tail = tail->next;
+            }
+        }
+
+        if (head && !head->next)
+        {
+            return head;
+        }
+
+        ASTNode *b = ast_create(NODE_BLOCK);
+        b->block.statements = head;
+        return b;
+    }
     if (tk.type == TOK_ASSERT)
     {
         return parse_assert(ctx, l);
