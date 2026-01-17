@@ -2073,6 +2073,21 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
         fprintf(out, ";\n"); // Statement terminator
         break;
     }
+    case NODE_EXPR_LITERAL:
+        // String literal statement should auto-print
+        if (node->literal.type_kind == 2 || node->literal.type_kind == TOK_STRING)
+        {
+            fprintf(out, "    printf(\"%%s\\n\", ");
+            codegen_expression(ctx, node, out);
+            fprintf(out, ");\n");
+        }
+        else
+        {
+            // Non-string literals as statements - just evaluate
+            codegen_expression(ctx, node, out);
+            fprintf(out, ";\n");
+        }
+        break;
     default:
         codegen_expression(ctx, node, out);
         fprintf(out, ";\n");
