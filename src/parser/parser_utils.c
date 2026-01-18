@@ -774,7 +774,7 @@ Module *find_module(ParserContext *ctx, const char *alias)
     Module *m = ctx->modules;
     while (m)
     {
-        if (strcmp(m->alias, alias) == 0)
+        if (m->alias && strcmp(m->alias, alias) == 0)
         {
             return m;
         }
@@ -786,7 +786,7 @@ Module *find_module(ParserContext *ctx, const char *alias)
 void register_module(ParserContext *ctx, const char *alias, const char *path)
 {
     Module *m = xmalloc(sizeof(Module));
-    m->alias = xstrdup(alias);
+    m->alias = alias ? xstrdup(alias) : NULL;
     m->path = xstrdup(path);
     m->base_name = extract_module_name(path);
     m->next = ctx->modules;
@@ -2582,7 +2582,32 @@ char *rewrite_expr_methods(ParserContext *ctx, char *raw)
                     src++;
 
                     char mangled[256];
-                    snprintf(mangled, sizeof(mangled), "%s_%s", func_name, method);
+
+                    // Resolve alias
+                    Module *mod = find_module(ctx, func_name);
+                    if (mod)
+                    {
+                        if (mod->is_c_header)
+                        {
+                            snprintf(mangled, sizeof(mangled), "%s", method);
+                        }
+                        else
+                        {
+                            snprintf(mangled, sizeof(mangled), "%s_%s", mod->base_name, method);
+                        }
+                    }
+                    else
+                    {
+                        ASTNode *sdef = find_struct_def(ctx, func_name);
+                        if (sdef)
+                        {
+                            snprintf(mangled, sizeof(mangled), "%s__%s", func_name, method);
+                        }
+                        else
+                        {
+                            snprintf(mangled, sizeof(mangled), "%s_%s", func_name, method);
+                        }
+                    }
 
                     if (*src == ')')
                     {

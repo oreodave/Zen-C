@@ -1771,7 +1771,14 @@ char *process_printf_sugar(ParserContext *ctx, const char *content, int newline,
             }
             if (depth == 1 && *p == ':' && !colon)
             {
-                colon = p;
+                if (*(p + 1) == ':')
+                {
+                    p++;
+                }
+                else
+                {
+                    colon = p;
+                }
             }
             if (depth == 0)
             {

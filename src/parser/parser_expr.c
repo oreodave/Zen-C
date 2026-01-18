@@ -800,7 +800,14 @@ static ASTNode *create_fstring_block(ParserContext *ctx, const char *content)
             }
             if (depth == 1 && *p == ':' && !colon)
             {
-                colon = p;
+                if ((p + 1) < end_brace && *(p + 1) == ':')
+                {
+                    p++;
+                }
+                else
+                {
+                    colon = p;
+                }
             }
             p++;
         }
