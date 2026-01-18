@@ -874,7 +874,7 @@ char *parse_tuple_literal(ParserContext *ctx, Lexer *l, const char *tn)
     free(c);
     return o;
 }
-char *parse_embed(ParserContext *ctx, Lexer *l)
+ASTNode *parse_embed(ParserContext *ctx, Lexer *l)
 {
     lexer_next(l);
     Token t = lexer_next(l);
@@ -885,6 +885,15 @@ char *parse_embed(ParserContext *ctx, Lexer *l)
     char fn[256];
     strncpy(fn, t.start + 1, t.len - 2);
     fn[t.len - 2] = 0;
+
+    // Check for optional "as Type"
+    Type *target_type = NULL;
+    if (lexer_peek(l).type == TOK_IDENT && lexer_peek(l).len == 2 &&
+        strncmp(lexer_peek(l).start, "as", 2) == 0)
+    {
+        lexer_next(l); // consume 'as'
+        target_type = parse_type_formal(ctx, l);
+    }
 
     FILE *f = fopen(fn, "rb");
     if (!f)
@@ -898,16 +907,103 @@ char *parse_embed(ParserContext *ctx, Lexer *l)
     fread(b, 1, len, f);
     fclose(f);
 
-    register_slice(ctx, "char");
-    size_t oc = len * 6 + 128;
+    size_t oc = len * 6 + 256;
     char *o = xmalloc(oc);
-    sprintf(o, "(Slice_char){.data=(char[]){");
+
+    // Default Type if none
+    if (!target_type)
+    {
+        // Default: Slice_char
+        register_slice(ctx, "char");
+
+        Type *slice_type = type_new(TYPE_STRUCT);
+        slice_type->name = xstrdup("Slice_char");
+        target_type = slice_type;
+
+        sprintf(o, "(Slice_char){.data=(char[]){");
+    }
+    else
+    {
+        // Handle specific type
+        char *ts = type_to_string(target_type);
+
+        if (target_type->kind == TYPE_ARRAY)
+        {
+            char *inner_ts = type_to_string(target_type->inner);
+            if (target_type->array_size > 0)
+            {
+                Type *ptr_type = type_new_ptr(target_type->inner); // Reuse inner
+                target_type = ptr_type;
+                sprintf(o, "(%s[]){", inner_ts);
+            }
+            else
+            {
+                // Slice -> Slice_T struct
+                register_slice(ctx, inner_ts);
+                char slice_name[256];
+                sprintf(slice_name, "Slice_%s", inner_ts);
+                Type *slice_t = type_new(TYPE_STRUCT);
+                slice_t->name = xstrdup(slice_name);
+                target_type = slice_t;
+                sprintf(o, "(%s){.data=(%s[]){", slice_name, inner_ts);
+            }
+            free(inner_ts);
+        }
+        else
+        {
+            if (strcmp(ts, "string") == 0 || strcmp(ts, "char*") == 0)
+            {
+                sprintf(o, "(char*)\"");
+            }
+            else
+            {
+                sprintf(o, "(%s){", ts);
+            }
+        }
+        free(ts);
+    }
+
     char *p = o + strlen(o);
+
+    // Check if string mode
+    int is_string = (target_type && (strcmp(type_to_string(target_type), "string") == 0 ||
+                                     strcmp(type_to_string(target_type), "char*") == 0));
+
     for (int i = 0; i < len; i++)
     {
-        p += sprintf(p, "0x%02X,", b[i]);
+        if (is_string)
+        {
+            // Hex escape for string
+            p += sprintf(p, "\\x%02X", b[i]);
+        }
+        else
+        {
+            p += sprintf(p, "0x%02X,", b[i]);
+        }
     }
-    sprintf(p, "},.len=%ld,.cap=%ld}", len, len);
+
+    if (is_string)
+    {
+        sprintf(p, "\"");
+    }
+    else
+    {
+        int is_slice = (strncmp(o, "(Slice_", 7) == 0);
+
+        if (is_slice)
+        {
+            sprintf(p, "},.len=%ld,.cap=%ld}", len, len);
+        }
+        else
+        {
+            sprintf(p, "}");
+        }
+    }
+
     free(b);
-    return o;
+
+    ASTNode *n = ast_create(NODE_RAW_STMT);
+    n->raw_stmt.content = o;
+    n->type_info = target_type;
+    return n;
 }

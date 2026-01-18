@@ -394,7 +394,7 @@ ASTNode *parse_lambda(ParserContext *ctx, Lexer *l);
 char *parse_condition_raw(ParserContext *ctx, Lexer *l);
 char *parse_array_literal(ParserContext *ctx, Lexer *l, const char *st);
 char *parse_tuple_literal(ParserContext *ctx, Lexer *l, const char *tn);
-char *parse_embed(ParserContext *ctx, Lexer *l);
+ASTNode *parse_embed(ParserContext *ctx, Lexer *l);
 
 ASTNode *parse_macro_call(ParserContext *ctx, Lexer *l, char *name);
 ASTNode *parse_statement(ParserContext *ctx, Lexer *l);

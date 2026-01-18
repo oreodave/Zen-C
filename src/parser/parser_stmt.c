@@ -242,11 +242,12 @@ ASTNode *parse_match(ParserContext *ctx, Lexer *l)
                 p_str = tmp;
             }
 
-            // Check for range pattern: value..end or value..=end
-            if (lexer_peek(l).type == TOK_DOTDOT || lexer_peek(l).type == TOK_DOTDOT_EQ)
+            // Check for range pattern: value..end, value..<end or value..=end
+            if (lexer_peek(l).type == TOK_DOTDOT || lexer_peek(l).type == TOK_DOTDOT_EQ ||
+                lexer_peek(l).type == TOK_DOTDOT_LT)
             {
                 int is_inclusive = (lexer_peek(l).type == TOK_DOTDOT_EQ);
-                lexer_next(l); // eat .. or ..=
+                lexer_next(l); // eat operator
                 Token end_tok = lexer_next(l);
                 char *end_str = token_strdup(end_tok);
 
@@ -1071,9 +1072,12 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l)
         Token next = lexer_peek(l);
         if (next.type == TOK_IDENT && strncmp(next.start, "embed", 5) == 0)
         {
-            char *e = parse_embed(ctx, l);
-            init = ast_create(NODE_RAW_STMT);
-            init->raw_stmt.content = e;
+            init = parse_embed(ctx, l);
+
+            if (!type && init->type_info)
+            {
+                type = type_to_string(init->type_info);
+            }
             if (!type)
             {
                 register_slice(ctx, "char");
@@ -1583,9 +1587,9 @@ ASTNode *parse_for(ParserContext *ctx, Lexer *l)
         {
             ASTNode *start_expr = parse_expression(ctx, l);
             int is_inclusive = 0;
-            if (lexer_peek(l).type == TOK_DOTDOT)
+            if (lexer_peek(l).type == TOK_DOTDOT || lexer_peek(l).type == TOK_DOTDOT_LT)
             {
-                lexer_next(l); // consume ..
+                lexer_next(l); // consume .. or ..<
             }
 
             else if (lexer_peek(l).type == TOK_DOTDOT_EQ)
@@ -3327,7 +3331,7 @@ ASTNode *parse_struct(ParserContext *ctx, Lexer *l, int is_union)
             continue;
         }
 
-        // --- HANDLE 'use' (Struct Embedding) ---
+        // Handle 'use' (Struct Embedding)
         if (t.type == TOK_USE)
         {
             lexer_next(l); // eat use

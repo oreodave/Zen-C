@@ -194,7 +194,8 @@ match val {
     2 || 3 => print("Two or Three"),   // OR with ||
     4 or 5 => print("Four or Five"),   // OR with 'or'
     6, 7, 8 => print("Six to Eight"),  // OR with comma
-    10..15 => print("10 to 14"),       // Exclusive range
+    10..15 => print("10 to 14"),       // Exclusive range (Legacy)
+    10..<15 => print("10 to 14"),      // Exclusive range (Explicit)
     20..=25 => print("20 to 25"),      // Inclusive range
     _ => print("Other")
 }
@@ -211,6 +212,7 @@ match shape {
 ```zc
 // Range
 for i in 0..10 { ... }      // Exclusive (0 to 9)
+for i in 0..<10 { ... }     // Exclusive (Explicit)
 for i in 0..=10 { ... }     // Inclusive (0 to 10)
 for i in 0..10 step 2 { ... }
 
@@ -240,16 +242,45 @@ unless is_valid { return; }
 
 ### 6. Operators
 
-| Operator | Description | Function Mapping |
+Zen C supports operator overloading for user-defined structs by implementing specific method names.
+
+#### Overloadable Operators
+
+| Category | Operator | Method Name |
 |:---|:---|:---|
-| `+`, `-`, `*`, `/`, `%` | Arithmetic | `add`, `sub`, `mul`, `div`, `rem` |
-| `==`, `!=`, `<`, `>` | Comparison | `eq`, `neq`, `lt`, `gt` |
-| `[]` | Indexing | `get`, `set` |
-| `\|>` | Pipeline (`x \|> f(y)` -> `f(x, y)`) | - |
-| `??` | Null Coalescing (`val ?? default`) | - |
-| `??=` | Null Assignment (`val ??= init`) | - |
-| `?.` | Safe Navigation (`ptr?.field`) | - |
-| `?` | Try Operator (`res?` returns error if present) | - |
+| **Arithmetic** | `+`, `-`, `*`, `/`, `%` | `add`, `sub`, `mul`, `div`, `rem` |
+| **Comparison** | `==`, `!=` | `eq`, `neq` |
+| | `<`, `>`, `<=`, `>=` | `lt`, `gt`, `le`, `ge` |
+| **Bitwise** | `&`, `\|`, `^` | `bitand`, `bitor`, `bitxor` |
+| | `<<`, `>>` | `shl`, `shr` |
+| **Unary** | `-` | `neg` |
+| | `!` | `not` |
+| | `~` | `bitnot` |
+| **Index** | `a[i]` | `get(a, i)` |
+| | `a[i] = v` | `set(a, i, v)` |
+
+**Example:**
+```zc
+impl Point {
+    fn add(self, other: Point) -> Point {
+        return Point{x: self.x + other.x, y: self.y + other.y};
+    }
+}
+
+var p3 = p1 + p2; // Calls p1.add(p2)
+```
+
+#### Syntactic Sugar
+
+These operators are built-in language features and cannot be overloaded directly.
+
+| Operator | Name | Description |
+|:---|:---|:---|
+| `\|>` | Pipeline | `x \|> f(y)` desugars to `f(x, y)` |
+| `??` | Null Coalescing | `val ?? default` returns `default` if `val` is NULL (pointers) |
+| `??=` | Null Assignment | `val ??= init` assigns if `val` is NULL |
+| `?.` | Safe Navigation | `ptr?.field` accesses field only if `ptr` is not NULL |
+| `?` | Try Operator | `res?` returns error if present (Result/Option types) |
 
 ### 7. Printing and String Interpolation
 
@@ -329,7 +360,7 @@ Define methods on types using `impl`.
 ```zc
 impl Point {
     // Static method (constructor convention)
-    fn new(x: int, y: int) -> Point {
+    fn new(x: int, y: int) -> Self {
         return Point{x: x, y: y};
     }
 
@@ -428,9 +459,15 @@ println "Build Date: {build_date}";
 ```
 
 #### Embed
-Embed files as byte arrays.
+Embed files as specified types.
 ```zc
-var png = embed "assets/logo.png";
+// Default (Slice_char)
+var data = embed "assets/logo.png";
+
+// Typed Embed
+var text = embed "shader.glsl" as string;    // Embbed as C-string
+var rom  = embed "bios.bin" as u8[1024];     // Embed as fixed array
+var wav  = embed "sound.wav" as u8[];        // Embed as Slice_u8
 ```
 
 #### Plugins

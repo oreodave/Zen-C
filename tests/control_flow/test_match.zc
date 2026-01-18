@@ -24,7 +24,8 @@ fn classify_extended(n: int) -> int {
     match n {
         1 || 2 => { return 100; },      // OR pattern with ||
         3 or 4 => { return 200; },       // OR pattern with 'or'
-        5..8 => { return 300; },         // Range exclusive (5, 6, 7)
+        5..<8 => { return 300; },        // Use ..< for exclusive range (originally 5..8)
+        8..8 => { return 305; },         // Single valid? (empty range)
         10..=15 => { return 400; },      // Range inclusive (10-15)
         _ => { return -1; }
     }

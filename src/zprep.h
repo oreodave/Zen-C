@@ -53,6 +53,7 @@ typedef enum
     TOK_AT,
     TOK_DOTDOT,
     TOK_DOTDOT_EQ,
+    TOK_DOTDOT_LT,
     TOK_ARROW,
     TOK_PIPE,
     TOK_TEST,

@@ -3075,10 +3075,10 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
             }
 
             // Case: [..] or [..end]
-            if (lexer_peek(l).type == TOK_DOTDOT)
+            if (lexer_peek(l).type == TOK_DOTDOT || lexer_peek(l).type == TOK_DOTDOT_LT)
             {
                 is_slice = 1;
-                lexer_next(l); // consume ..
+                lexer_next(l); // consume .. or ..<
                 if (lexer_peek(l).type != TOK_RBRACKET)
                 {
                     end = parse_expression(ctx, l);
@@ -3088,7 +3088,7 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
             {
                 // Case: [start] or [start..] or [start..end]
                 start = parse_expression(ctx, l);
-                if (lexer_peek(l).type == TOK_DOTDOT)
+                if (lexer_peek(l).type == TOK_DOTDOT || lexer_peek(l).type == TOK_DOTDOT_LT)
                 {
                     is_slice = 1;
                     lexer_next(l); // consume ..

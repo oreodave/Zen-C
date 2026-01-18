@@ -361,6 +361,11 @@ Token lexer_next(Lexer *l)
             len = 3;
             type = TOK_DOTDOT_EQ;
         }
+        else if (s[2] == '<')
+        {
+            len = 3;
+            type = TOK_DOTDOT_LT;
+        }
         else
         {
             len = 2;

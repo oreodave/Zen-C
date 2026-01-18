@@ -164,3 +164,11 @@ test "exclusive range regression check" {
     }
     assert(count3 == 5, "Expected 5 iterations for 0..5")
 }
+
+test "explicit exclusive range (..<)" {
+    var count4 = 0
+    for i in 0..<5 {
+        count4 += 1
+    }
+    assert(count4 == 5, "Expected 5 iterations for 0..<5")
+}
