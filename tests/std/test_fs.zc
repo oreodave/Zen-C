@@ -61,6 +61,7 @@ test "test_std_fs_extended" {
     "Read Dir";
     var list_res = File::read_dir(test_dir);
     assert(list_res.is_ok(), "Read dir failed");
+    
     var entries = list_res.unwrap();
     var found_idx = -1;
     for entry in &entries {

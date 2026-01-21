@@ -2228,10 +2228,54 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
         break;
     }
     case NODE_RETURN:
-        fprintf(out, "    return ");
-        codegen_expression(ctx, node->ret.value, out);
-        fprintf(out, ";\n");
+    {
+        int handled = 0;
+        // If returning a variable that implements Drop, we must zero it out
+        // to prevent the cleanup attribute from destroying the resource we just returned.
+        if (node->ret.value && node->ret.value->type == NODE_EXPR_VAR)
+        {
+            char *tname = infer_type(ctx, node->ret.value);
+            if (tname)
+            {
+                char *clean = tname;
+                if (strncmp(clean, "struct ", 7) == 0)
+                {
+                    clean += 7;
+                }
+
+                ASTNode *def = find_struct_def(ctx, clean);
+                if (def && def->type_info && def->type_info->traits.has_drop)
+                {
+                    fprintf(out, "    return ({ ");
+                    if (strstr(g_config.cc, "tcc"))
+                    {
+                        fprintf(out, "__typeof__(");
+                        codegen_expression(ctx, node->ret.value, out);
+                        fprintf(out, ")");
+                    }
+                    else
+                    {
+                        fprintf(out, "__auto_type");
+                    }
+                    fprintf(out, " _z_ret_mv = ");
+                    codegen_expression(ctx, node->ret.value, out);
+                    fprintf(out, "; memset(&");
+                    codegen_expression(ctx, node->ret.value, out);
+                    fprintf(out, ", 0, sizeof(_z_ret_mv)); _z_ret_mv; });\n");
+                    handled = 1;
+                }
+                free(tname);
+            }
+        }
+
+        if (!handled)
+        {
+            fprintf(out, "    return ");
+            codegen_expression(ctx, node->ret.value, out);
+            fprintf(out, ";\n");
+        }
         break;
+    }
     case NODE_EXPR_MEMBER:
     {
         codegen_expression(ctx, node->member.target, out);

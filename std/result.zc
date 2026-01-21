@@ -1,4 +1,3 @@
-
 import "./core.zc"
 
 struct Result<T> {
@@ -36,6 +35,14 @@ impl Result<T> {
         var v = self.val;
         memset(&self.val, 0, sizeof(T));
         return v;
+    }
+
+    fn unwrap_ref(self) -> T* {
+        if (!self.is_ok) {
+            !"Panic: unwrap_ref called on Err: {self.err}";
+            exit(1);
+        }
+        return &self.val;
     }
 
     fn expect(self, msg: char*) -> T {

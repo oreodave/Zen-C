@@ -1,4 +1,3 @@
-
 import "./core.zc"
 import "./vec.zc"
 import "./option.zc"
@@ -16,10 +15,15 @@ impl String {
             v.push(s[i]);
         }
         v.push(0);
+        
+        // Extract fields to transfer ownership
         var d = v.data;
         var l = v.len;
         var c = v.cap;
+        
+        // Forget the local vector so it doesn't free the memory
         v.forget();
+        
         return String { vec: Vec<char> { data: d, len: l, cap: c } };
     }
 
@@ -27,6 +31,7 @@ impl String {
         return String::new(s);
     }
 
+    // Fixed: 'self' implies pointer in generated C
     fn c_str(self) -> char* {
         return self.vec.data;
     }
@@ -40,7 +45,11 @@ impl String {
     }
     
     fn append(self, other: String*) {
-        self.vec.len = self.vec.len - 1;
+        // Remove null terminator before appending
+        if (self.vec.len > 0) {
+            self.vec.len = self.vec.len - 1;
+        }
+        
         var other_len = (*other).vec.len;
         for (var i = 0; i < other_len; i = i + 1) {
             self.vec.push((*other).vec.get(i));
@@ -50,10 +59,12 @@ impl String {
     fn add(self, other: String*) -> String {
         var new_s = String::from(self.c_str());
         new_s.append(other);
+        
         var d = new_s.vec.data;
         var l = new_s.vec.len;
         var c = new_s.vec.cap;
         new_s.forget();
+        
         return String { vec: Vec<char> { data: d, len: l, cap: c } };
     }
 
@@ -62,10 +73,8 @@ impl String {
     }
 
     fn length(self) -> usize {
-        if (self.vec.len == 0) { return 0;
-        }
+        if (self.vec.len == 0) { return 0; }
         return self.vec.len - 1;
-        // Exclude null terminator
     }
     
     fn substring(self, start: usize, len: usize) -> String {
@@ -73,15 +82,16 @@ impl String {
             panic("substring out of bounds");
         }
         var v = Vec<char>::new();
-        // Manual copy
         for (var i: usize = 0; i < len; i = i + 1) {
              v.push(self.vec.get(start + i));
         }
         v.push(0);
+        
         var d = v.data;
         var l = v.len;
         var c = v.cap;
         v.forget();
+        
         return String { vec: Vec<char> { data: d, len: l, cap: c } };
     }
 
@@ -96,11 +106,12 @@ impl String {
     }
 
     fn print(self) {
-        "{self.c_str()}"..;
+        printf("%s", self.c_str());
+        fflush(stdout);
     }
 
     fn println(self) {
-        "{self.c_str()}";
+        printf("%s\n", self.c_str());
     }
     
     fn is_empty(self) -> bool {

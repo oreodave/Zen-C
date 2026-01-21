@@ -1,15 +1,74 @@
-
 import "./core.zc"
 import "./result.zc"
 import "./string.zc"
 import "./vec.zc"
 
+const Z_SEEK_SET: int = 0;
+const Z_SEEK_END: int = 2;
+const Z_F_OK: int = 0;
+
+
+// TODO: restructure this tomorrow.
 raw {
     #include <dirent.h>
     #include <sys/stat.h>
     #include <unistd.h>
+
+    // typedef needed for Vec<DirEntry*> generation if inferred
+    typedef struct DirEntry* DirEntryPtr;
     
-    // Helper to get file size for stat
+    void* _z_fs_fopen(char* path, char* mode) {
+        return fopen(path, mode);
+    }
+
+    int _z_fs_fclose(void* stream) {
+        return fclose((FILE*)stream);
+    }
+
+    size_t _z_fs_fread(void* ptr, size_t size, size_t nmemb, void* stream) {
+        return fread(ptr, size, nmemb, (FILE*)stream);
+    }
+
+    size_t _z_fs_fwrite(void* ptr, size_t size, size_t nmemb, void* stream) {
+        return fwrite(ptr, size, nmemb, (FILE*)stream);
+    }
+
+    int _z_fs_fseek(void* stream, long offset, int whence) {
+        return fseek((FILE*)stream, offset, whence);
+    }
+
+    long _z_fs_ftell(void* stream) {
+        return ftell((FILE*)stream);
+    }
+
+    int _z_fs_access(char* pathname, int mode) {
+        return access(pathname, mode);
+    }
+
+    int _z_fs_unlink(char* pathname) {
+        return unlink(pathname);
+    }
+
+    int _z_fs_rmdir(char* pathname) {
+        return rmdir(pathname);
+    }
+
+    void* _z_fs_opendir(char* name) {
+        return opendir(name);
+    }
+
+    int _z_fs_closedir(void* dir) {
+        return closedir((DIR*)dir);
+    }
+
+    void* _z_fs_malloc(size_t size) {
+        return malloc(size);
+    }
+
+    void _z_fs_free(void* ptr) {
+        free(ptr);
+    }
+
     int _z_fs_get_metadata(char* path, uint64_t* size, int* is_dir, int* is_file) {
         struct stat st;
         if (stat(path, &st) != 0) return -1;
@@ -19,10 +78,11 @@ raw {
         return 0;
     }
     
-    int _z_fs_read_entry(void* dir, char* out_name, int* is_dir) {
+    int _z_fs_read_entry(void* dir, char* out_name, int buf_size, int* is_dir) {
         struct dirent* ent = readdir((DIR*)dir);
         if (!ent) return 0;
-        strcpy(out_name, ent->d_name);
+        strncpy(out_name, ent->d_name, buf_size - 1);
+        out_name[buf_size - 1] = 0;
         *is_dir = (ent->d_type == DT_DIR);
         return 1;
     }
@@ -31,26 +91,38 @@ raw {
         #ifdef _WIN32
             return mkdir(path);
         #else
-            return mkdir(path, 0777); 
+            return mkdir(path, 0777);
         #endif
     }
 }
 
 extern fn _z_fs_mkdir(path: char*) -> int;
 extern fn _z_fs_get_metadata(path: char*, size: U64*, is_dir: int*, is_file: int*) -> int;
-extern fn _z_fs_read_entry(dir: void*, out_name: char*, is_dir: int*) -> int;
+extern fn _z_fs_read_entry(dir: void*, out_name: char*, buf_size: int, is_dir: int*) -> int;
+extern fn _z_fs_fopen(path: char*, mode: char*) -> void*;
+extern fn _z_fs_fclose(stream: void*) -> int;
+extern fn _z_fs_fread(ptr: void*, size: usize, nmemb: usize, stream: void*) -> usize;
+extern fn _z_fs_fwrite(ptr: void*, size: usize, nmemb: usize, stream: void*) -> usize;
+extern fn _z_fs_fseek(stream: void*, offset: long, whence: int) -> int;
+extern fn _z_fs_ftell(stream: void*) -> long;
+extern fn _z_fs_access(pathname: char*, mode: int) -> int;
+extern fn _z_fs_unlink(pathname: char*) -> int;
+extern fn _z_fs_rmdir(pathname: char*) -> int;
+extern fn _z_fs_opendir(name: char*) -> void*;
+extern fn _z_fs_closedir(dir: void*) -> int;
+extern fn _z_fs_malloc(size: usize) -> void*;
+extern fn _z_fs_free(ptr: void*);
 
 struct File {
-    handle: void*; // FILE*
+    handle: void*;
 }
 
 struct Metadata {
     size: U64;
-    is_dir: bool; 
+    is_dir: bool;
     is_file: bool;
 }
 
-// @derive(Eq) - Removed to avoid double-free on String field
 struct DirEntry {
     name: String;
     is_dir: bool;
@@ -58,111 +130,156 @@ struct DirEntry {
 
 impl File {
     fn open(path: char*, mode: char*) -> Result<File> {
-        var h = fopen(path, mode);
+        var h = _z_fs_fopen(path, mode);
         if (h == NULL) {
             return Result<File>::Err("Failed to open file");
         }
         return Result<File>::Ok(File { handle: h });
     }
-    
+
     fn close(self) {
         if (self.handle) {
-            fclose(self.handle);
+            _z_fs_fclose(self.handle);
             self.handle = NULL;
         }
     }
-    
+
     fn read_to_string(self) -> Result<String> {
-        if (self.handle == NULL) return Result<String>::Err("File not open");
+        if (self.handle == NULL) {
+            return Result<String>::Err("File not open");
+        }
         
-        fseek(self.handle, 0, SEEK_END);
-        var size = ftell(self.handle);
-        fseek(self.handle, 0, SEEK_SET);
+        _z_fs_fseek(self.handle, 0, Z_SEEK_END);
+        var size = _z_fs_ftell(self.handle);
+        _z_fs_fseek(self.handle, 0, Z_SEEK_SET);
         
-        var buffer: char* = malloc((usize)size + 1);
-        if (buffer == NULL) return Result<String>::Err("Out of memory");
+        var buffer: char* = _z_fs_malloc((usize)size + 1);
+        if (buffer == NULL) {
+            return Result<String>::Err("Out of memory");
+        }
         
-        var read = fread(buffer, 1, size, self.handle);
+        var read = _z_fs_fread(buffer, 1, size, self.handle);
         buffer[read] = 0;
         
         var s = String::new(buffer);
-        free(buffer);
+        _z_fs_free(buffer);
+        
         var res = Result<String>::Ok(s);
         s.forget();
+        
         var ret = res;
         res.forget();
         return ret;
     }
-    
+
     fn read_all(path: char*) -> Result<String> {
         var res = File::open(path, "rb");
-        if (res.is_err()) return Result<String>::Err(res.err);
+        if (res.is_err()) {
+            return Result<String>::Err(res.err);
+        }
         
         var f: File = res.unwrap();
         var s_res = f.read_to_string();
         f.close();
+        
         var ret = s_res;
         s_res.forget();
         return ret;
     }
-    
+
     fn write_string(self, content: char*) -> Result<bool> {
-        if (self.handle == NULL) return Result<bool>::Err("File not open");
+        if (self.handle == NULL) {
+            return Result<bool>::Err("File not open");
+        }
+        
         var len = strlen(content);
-        var written = fwrite(content, 1, len, self.handle);
-        if (written != len) return Result<bool>::Err("Write incomplete");
+        var written = _z_fs_fwrite(content, 1, len, self.handle);
+        if (written != len) {
+            return Result<bool>::Err("Write incomplete");
+        }
         return Result<bool>::Ok(true);
     }
-    
+
     fn exists(path: char*) -> bool {
-        return access(path, F_OK) == 0;
+        return _z_fs_access(path, Z_F_OK) == 0;
     }
-    
+
     fn metadata(path: char*) -> Result<Metadata> {
         var size: uint64_t;
         var is_d: int;
         var is_f: int;
+        
         if (_z_fs_get_metadata(path, &size, &is_d, &is_f) != 0) {
             return Result<Metadata>::Err("Failed to get metadata");
         }
-        return Result<Metadata>::Ok(Metadata { size: (U64)size, is_dir: is_d != 0, is_file: is_f != 0 });
+        
+        return Result<Metadata>::Ok(Metadata { 
+            size: (U64)size, 
+            is_dir: is_d != 0, 
+            is_file: is_f != 0 
+        });
     }
-    
+
     fn create_dir(path: char*) -> Result<bool> {
-        if (_z_fs_mkdir(path) != 0) return Result<bool>::Err("Failed to create directory");
+        if (_z_fs_mkdir(path) != 0) {
+            return Result<bool>::Err("Failed to create directory");
+        }
         return Result<bool>::Ok(true);
     }
-    
+
     fn remove_file(path: char*) -> Result<bool> {
-        if (unlink(path) != 0) return Result<bool>::Err("Failed to remove file");
+        if (_z_fs_unlink(path) != 0) {
+            return Result<bool>::Err("Failed to remove file");
+        }
         return Result<bool>::Ok(true);
     }
-    
+
     fn remove_dir(path: char*) -> Result<bool> {
-        if (rmdir(path) != 0) return Result<bool>::Err("Failed to remove directory");
+        if (_z_fs_rmdir(path) != 0) {
+            return Result<bool>::Err("Failed to remove directory");
+        }
         return Result<bool>::Ok(true);
     }
-    
+
     fn read_dir(path: char*) -> Result< Vec<DirEntry> > {
-        var dir = opendir(path);
-        if (dir == NULL) return Result< Vec<DirEntry> >::Err("Failed to open directory");
-        
-        var entries = Vec<DirEntry>::new();
-        var name_buf = malloc(256);
-        var is_d: int = 0;
-        
-        while (_z_fs_read_entry(dir, name_buf, &is_d)) {
-            // Skip . and ..
-            if (strcmp(name_buf, ".") == 0 || strcmp(name_buf, "..") == 0) continue;
-            
-            entries.push(DirEntry {
-                name: String::new(name_buf),
-                is_dir: is_d != 0
-            });
+        var dir = _z_fs_opendir(path);
+        if (dir == NULL) {
+            return Result< Vec<DirEntry> >::Err("Failed to open directory");
         }
         
-        free(name_buf);
-        closedir(dir);
+        var entries = Vec<DirEntry>::new();
+        var name_buf: char* = _z_fs_malloc(256);
+        
+        if (name_buf == NULL) {
+            _z_fs_closedir(dir);
+            return Result< Vec<DirEntry> >::Err("Out of memory");
+        }
+        
+        var is_d: int = 0;
+        
+        while (_z_fs_read_entry(dir, name_buf, 256, &is_d)) {
+            if (strcmp(name_buf, ".") == 0 || strcmp(name_buf, "..") == 0) {
+                continue;
+            }
+            
+            var s = String::new(name_buf);
+            var ent = DirEntry {
+                name: s,
+                is_dir: is_d != 0
+            };
+            
+            // Transfer ownership: String -> DirEntry
+            s.forget();
+            
+            entries.push(ent);
+            
+            // Transfer ownership: DirEntry -> Vec
+            ent.name.forget();
+        }
+        
+        _z_fs_free(name_buf);
+        _z_fs_closedir(dir);
+        
         var res = Result< Vec<DirEntry> >::Ok(entries);
         entries.forget();
         var ret = res;
