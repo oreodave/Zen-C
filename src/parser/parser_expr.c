@@ -26,6 +26,7 @@ static void validate_named_arguments(Token call_token, const char *func_name, ch
 {
     if (!func_def || !arg_names)
     {
+        (void)func_name;
         return;
     }
 

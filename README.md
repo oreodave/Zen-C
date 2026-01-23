@@ -256,6 +256,8 @@ fn add(a: int, b: int) -> int {
 
 // Named arguments supported in calls
 add(a: 10, b: 20);
+
+> **Note**: Named arguments must strictly follow the defined parameter order. `add(b: 20, a: 10)` is invalid.
 ```
 
 #### Default Arguments
