@@ -562,17 +562,17 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l)
             // Fallbacks for literals
             else if (init->type == NODE_EXPR_LITERAL)
             {
-                if (init->literal.type_kind == 0)
+                if (init->literal.type_kind == LITERAL_INT)
                 {
                     type = xstrdup("int");
                     type_obj = type_new(TYPE_INT);
                 }
-                else if (init->literal.type_kind == 1)
+                else if (init->literal.type_kind == LITERAL_FLOAT)
                 {
                     type = xstrdup("float");
                     type_obj = type_new(TYPE_FLOAT);
                 }
-                else if (init->literal.type_kind == 2)
+                else if (init->literal.type_kind == LITERAL_STRING)
                 {
                     type = xstrdup("string");
                     type_obj = type_new(TYPE_STRING);
@@ -596,7 +596,7 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l)
     add_symbol_with_token(ctx, name, type, type_obj, name_tok);
 
     // NEW: Capture Const Integer Values
-    if (init && init->type == NODE_EXPR_LITERAL && init->literal.type_kind == 0)
+    if (init && init->type == NODE_EXPR_LITERAL && init->literal.type_kind == LITERAL_INT)
     {
         Symbol *s = find_symbol_entry(ctx, name); // Helper to find the struct
         if (s)

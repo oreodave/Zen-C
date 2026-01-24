@@ -917,8 +917,8 @@ ASTNode *parse_while(ParserContext *ctx, Lexer *l)
     check_assignment_condition(cond);
 
     // Zen: While(true)
-    if ((cond->type == NODE_EXPR_LITERAL && cond->literal.type_kind == TOK_INT &&
-         strcmp(cond->literal.string_val, "1") == 0) ||
+    if ((cond->type == NODE_EXPR_LITERAL && cond->literal.type_kind == LITERAL_INT &&
+         cond->literal.int_val == 1) ||
         (cond->type == NODE_EXPR_VAR && strcmp(cond->var_ref.name, "true") == 0))
     {
         zen_trigger_at(TRIGGER_WHILE_TRUE, cond->token);
@@ -1060,7 +1060,7 @@ ASTNode *parse_for(ParserContext *ctx, Lexer *l)
                 // while(true)
                 ASTNode *while_loop = ast_create(NODE_WHILE);
                 ASTNode *true_lit = ast_create(NODE_EXPR_LITERAL);
-                true_lit->literal.type_kind = TOK_INT; // Treated as bool in conditions
+                true_lit->literal.type_kind = LITERAL_INT; // Treated as bool in conditions
                 true_lit->literal.int_val = 1;
                 true_lit->literal.string_val = xstrdup("1");
                 while_loop->while_stmt.condition = true_lit;
@@ -1203,7 +1203,7 @@ ASTNode *parse_for(ParserContext *ctx, Lexer *l)
     {
         // Empty condition = true
         ASTNode *true_lit = ast_create(NODE_EXPR_LITERAL);
-        true_lit->literal.type_kind = 0;
+        true_lit->literal.type_kind = LITERAL_INT;
         true_lit->literal.int_val = 1;
         cond = true_lit;
     }

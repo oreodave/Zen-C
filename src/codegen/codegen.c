@@ -12,21 +12,22 @@
 #include "zprep_plugin.h"
 
 // Emit literal expression (int, float, string, char)
+// Emit literal expression (int, float, string, char)
 static void codegen_literal_expr(ASTNode *node, FILE *out)
 {
-    if (node->literal.type_kind == TOK_STRING)
+    if (node->literal.type_kind == LITERAL_STRING)
     {
         fprintf(out, "\"%s\"", node->literal.string_val);
     }
-    else if (node->literal.type_kind == TOK_CHAR)
+    else if (node->literal.type_kind == LITERAL_CHAR)
     {
         fprintf(out, "%s", node->literal.string_val);
     }
-    else if (node->literal.type_kind == 1) // float
+    else if (node->literal.type_kind == LITERAL_FLOAT)
     {
         fprintf(out, "%f", node->literal.float_val);
     }
-    else // int
+    else // LITERAL_INT
     {
         if (node->literal.int_val > 9223372036854775807ULL)
         {
@@ -34,7 +35,7 @@ static void codegen_literal_expr(ASTNode *node, FILE *out)
         }
         else
         {
-            fprintf(out, "%llu", (unsigned long long)node->literal.int_val);
+            fprintf(out, "%lld", (long long)node->literal.int_val);
         }
     }
 }

@@ -21,6 +21,11 @@ fn main() {
     // Different types
     var mixed: (int, string) = (10, "Hello");
     assert(mixed.0 == 10, "Mixed 0");
+    assert(strcmp(mixed.1, "Hello") == 0, "Mixed 1 (String)");
+
+    // Regression for segfault (inferred tuple with string)
+    var p_str = (1, "World");
+    assert(strcmp(p_str.1, "World") == 0, "Inferred tuple string");
     
     // Tuple destructuring
     var (a, b) = get_pair();

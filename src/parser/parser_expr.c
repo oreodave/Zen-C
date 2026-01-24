@@ -203,7 +203,7 @@ static void check_format_string(ASTNode *call, Token t)
         return;
     }
 
-    if (fmt_arg->type != NODE_EXPR_LITERAL || fmt_arg->literal.type_kind != TOK_STRING)
+    if (fmt_arg->type != NODE_EXPR_LITERAL || fmt_arg->literal.type_kind != 2)
     {
         return;
     }
@@ -991,7 +991,7 @@ static ASTNode *create_fstring_block(ParserContext *ctx, const char *content)
             char *fmt_str = xmalloc(strlen(fmt) + 3);
             sprintf(fmt_str, "%%%s", fmt);
             arg_fmt = ast_create(NODE_EXPR_LITERAL);
-            arg_fmt->literal.type_kind = 2;
+            arg_fmt->literal.type_kind = LITERAL_STRING;
             arg_fmt->literal.string_val = fmt_str;
             arg_fmt->type_info = type_new(TYPE_STRING);
         }
@@ -1045,7 +1045,7 @@ static ASTNode *create_fstring_block(ParserContext *ctx, const char *content)
 static ASTNode *parse_int_literal(Token t)
 {
     ASTNode *node = ast_create(NODE_EXPR_LITERAL);
-    node->literal.type_kind = 0;
+    node->literal.type_kind = LITERAL_INT;
     node->type_info = type_new(TYPE_INT);
     char *s = token_strdup(t);
     unsigned long long val;
@@ -1066,7 +1066,7 @@ static ASTNode *parse_int_literal(Token t)
 static ASTNode *parse_float_literal(Token t)
 {
     ASTNode *node = ast_create(NODE_EXPR_LITERAL);
-    node->literal.type_kind = 1;
+    node->literal.type_kind = LITERAL_FLOAT;
     node->literal.float_val = atof(t.start);
     node->type_info = type_new(TYPE_F64);
     return node;
@@ -1076,7 +1076,7 @@ static ASTNode *parse_float_literal(Token t)
 static ASTNode *parse_string_literal(Token t)
 {
     ASTNode *node = ast_create(NODE_EXPR_LITERAL);
-    node->literal.type_kind = TOK_STRING;
+    node->literal.type_kind = LITERAL_STRING;
     node->literal.string_val = xmalloc(t.len);
     strncpy(node->literal.string_val, t.start + 1, t.len - 2);
     node->literal.string_val[t.len - 2] = 0;
@@ -1099,7 +1099,7 @@ static ASTNode *parse_fstring_literal(ParserContext *ctx, Token t)
 static ASTNode *parse_char_literal(Token t)
 {
     ASTNode *node = ast_create(NODE_EXPR_LITERAL);
-    node->literal.type_kind = TOK_CHAR;
+    node->literal.type_kind = LITERAL_CHAR;
     node->literal.string_val = token_strdup(t);
     node->type_info = type_new(TYPE_I8);
     return node;
@@ -2046,7 +2046,7 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
                 node->type_info = type_new(TYPE_INT); // Returns count
 
                 ASTNode *fmt_node = ast_create(NODE_EXPR_LITERAL);
-                fmt_node->literal.type_kind = 2; // string
+                fmt_node->literal.type_kind = LITERAL_STRING; // string
                 fmt_node->literal.string_val = xstrdup(fmt);
 
                 ASTNode *head = fmt_node, *tail = fmt_node;
@@ -2540,7 +2540,7 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
                 // Constant Folding for 'def', emits literal
                 node = ast_create(NODE_EXPR_LITERAL);
                 node->token = t;
-                node->literal.type_kind = 0; // INT (assumed for now from const_int_val)
+                node->literal.type_kind = LITERAL_INT; // INT (assumed for now from const_int_val)
                 node->literal.int_val = sym->const_int_val;
                 node->type_info = type_new(TYPE_INT);
                 // No need for resolution
@@ -2740,15 +2740,15 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
                 if (elements[i]->type == NODE_EXPR_LITERAL)
                 {
                     char buf[256];
-                    if (elements[i]->literal.type_kind == 0) // int
+                    if (elements[i]->literal.type_kind == LITERAL_INT) // int
                     {
                         sprintf(buf, "%lld", elements[i]->literal.int_val);
                     }
-                    else if (elements[i]->literal.type_kind == 1) // float
+                    else if (elements[i]->literal.type_kind == LITERAL_FLOAT) // float
                     {
                         sprintf(buf, "%f", elements[i]->literal.float_val);
                     }
-                    else if (elements[i]->literal.type_kind == 2) // string
+                    else if (elements[i]->literal.type_kind == LITERAL_STRING) // string
                     {
                         sprintf(buf, "\"%s\"", elements[i]->literal.string_val);
                     }
@@ -2969,7 +2969,7 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
             if (node->type_info && node->type_info->kind == TYPE_ARRAY &&
                 node->type_info->array_size > 0)
             {
-                if (index->type == NODE_EXPR_LITERAL && index->literal.type_kind == 0)
+                if (index->type == NODE_EXPR_LITERAL && index->literal.type_kind == LITERAL_INT)
                 {
                     int idx = index->literal.int_val;
                     if (idx < 0 || idx >= node->type_info->array_size)
@@ -3498,7 +3498,7 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
                 call->type_info = type_new(TYPE_INT);
 
                 ASTNode *fmt_node = ast_create(NODE_EXPR_LITERAL);
-                fmt_node->literal.type_kind = TOK_STRING;
+                fmt_node->literal.type_kind = LITERAL_STRING;
                 fmt_node->literal.string_val = xstrdup(fmt);
                 ASTNode *head = fmt_node, *tail = fmt_node;
 
@@ -4441,7 +4441,7 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
                 if (lhs->type_info && lhs->type_info->kind == TYPE_ARRAY &&
                     lhs->type_info->array_size > 0)
                 {
-                    if (start->type == NODE_EXPR_LITERAL && start->literal.type_kind == 0)
+                    if (start->type == NODE_EXPR_LITERAL && start->literal.type_kind == LITERAL_INT)
                     {
                         int idx = start->literal.int_val;
                         if (idx < 0 || idx >= lhs->type_info->array_size)
@@ -4564,7 +4564,7 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
                                     if (find_func(ctx, trait_mangled))
                                     {
                                         strcpy(mangled, trait_mangled); // Update mangled name
-                                        sig = find_func(ctx, mangled);
+                                        sig = find_func(ctx, trait_mangled);
                                         break;
                                     }
                                 }
@@ -4819,7 +4819,7 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
 
         if (strcmp(bin->binary.op, "/") == 0 || strcmp(bin->binary.op, "%") == 0)
         {
-            if (rhs->type == NODE_EXPR_LITERAL && rhs->literal.type_kind == 0 &&
+            if (rhs->type == NODE_EXPR_LITERAL && rhs->literal.type_kind == LITERAL_INT &&
                 rhs->literal.int_val == 0)
             {
                 warn_division_by_zero(op);
@@ -4845,8 +4845,8 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
                     }
                 }
             }
-            else if (lhs->type == NODE_EXPR_LITERAL && lhs->literal.type_kind == 0 &&
-                     rhs->type == NODE_EXPR_LITERAL && rhs->literal.type_kind == 0)
+            else if (lhs->type == NODE_EXPR_LITERAL && lhs->literal.type_kind == LITERAL_INT &&
+                     rhs->type == NODE_EXPR_LITERAL && rhs->literal.type_kind == LITERAL_INT)
             {
                 // Check if literals make sense (e.g. 5 > 5)
                 if (lhs->literal.int_val == rhs->literal.int_val)
@@ -4865,7 +4865,7 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
 
             if (lhs->type_info && type_is_unsigned(lhs->type_info))
             {
-                if (rhs->type == NODE_EXPR_LITERAL && rhs->literal.type_kind == 0 &&
+                if (rhs->type == NODE_EXPR_LITERAL && rhs->literal.type_kind == LITERAL_INT &&
                     rhs->literal.int_val == 0)
                 {
                     if (strcmp(bin->binary.op, ">=") == 0)

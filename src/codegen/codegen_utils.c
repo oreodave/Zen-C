@@ -455,15 +455,15 @@ char *infer_type(ParserContext *ctx, ASTNode *node)
 
     if (node->type == NODE_EXPR_LITERAL)
     {
-        if (node->literal.type_kind == TOK_STRING)
+        if (node->literal.type_kind == LITERAL_STRING)
         {
-            return "string";
+            return xstrdup("string");
         }
-        if (node->literal.type_kind == TOK_CHAR)
+        if (node->literal.type_kind == LITERAL_CHAR)
         {
-            return "char";
+            return xstrdup("char");
         }
-        if (node->literal.type_kind == 1)
+        if (node->literal.type_kind == LITERAL_FLOAT)
         {
             return "double";
         }

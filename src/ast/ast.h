@@ -11,6 +11,15 @@ typedef struct ASTNode ASTNode;
 
 // ** Formal Type System **
 // Used for Generics, Type Inference, and robust pointer handling.
+
+typedef enum
+{
+    LITERAL_INT = 0,
+    LITERAL_FLOAT = 1,
+    LITERAL_STRING = 2,
+    LITERAL_CHAR = 3
+} LiteralKind;
+
 typedef enum
 {
     TYPE_VOID,
@@ -329,7 +338,7 @@ struct ASTNode
 
         struct
         {
-            int type_kind;
+            LiteralKind type_kind;
             unsigned long long int_val;
             double float_val;
             char *string_val;

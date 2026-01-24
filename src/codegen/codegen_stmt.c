@@ -475,7 +475,8 @@ void codegen_match_internal(ParserContext *ctx, ASTNode *node, FILE *out, int us
 
         // Check if body is a string literal (should auto-print).
         ASTNode *body = c->match_case.body;
-        int is_string_literal = (body->type == NODE_EXPR_LITERAL && body->literal.type_kind == 2);
+        int is_string_literal =
+            (body->type == NODE_EXPR_LITERAL && body->literal.type_kind == LITERAL_STRING);
 
         if (is_expr)
         {
@@ -1576,7 +1577,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
     }
     case NODE_EXPR_LITERAL:
         // String literal statement should auto-print
-        if (node->literal.type_kind == 2 || node->literal.type_kind == TOK_STRING)
+        if (node->literal.type_kind == LITERAL_STRING)
         {
             fprintf(out, "    printf(\"%%s\\n\", ");
             codegen_expression(ctx, node, out);

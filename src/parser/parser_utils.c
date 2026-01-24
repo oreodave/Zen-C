@@ -1624,7 +1624,7 @@ ASTNode *copy_ast_replacing(ASTNode *n, const char *p, const char *c, const char
         new_node->field.type = replace_type_str(n->field.type, p, c, os, ns);
         break;
     case NODE_EXPR_LITERAL:
-        if (n->literal.type_kind == 2)
+        if (n->literal.type_kind == LITERAL_STRING)
         {
             new_node->literal.string_val = xstrdup(n->literal.string_val);
         }
