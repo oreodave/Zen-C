@@ -60,6 +60,37 @@ test "test_complex_lambdas" {
         println "  -> Nested application: Failed";
         exit(1);
     }
+
+    // Lambda with "fn" syntax (eg. block lambda)
+    var factor = 2;
+    var full = fn(x: int) -> int { return x * factor };
+
+    if (full(3) == 6) {
+        println "  -> Lambda fn syntax: Passed";
+    } else {
+        println "  -> Lambda fn syntax: Failed";
+        exit(1);
+    }
+
+    // Lambda with "fn" syntax (eg. block lambda) + multiple params
+    var addition = fn(sum1: int, sum2: int) -> int { return sum1 + sum2 };
+
+    if (addition(100, 505) == 605) {
+        println "  -> Lambda fn syntax: Passed";
+    } else {
+        println "  -> Lambda fn syntax: Failed";
+        exit(1);
+    }
+
+    // Lambda with "fn" syntax (eg. block lambda) + named args
+    var substract = fn(arg1: int, arg2: int) -> int { return arg1 - arg2 };
+
+    if (substract(arg1: 500, arg2: 100) == 400) {
+        println "  -> Lambda fn syntax: Passed";
+    } else {
+        println "  -> Lambda fn syntax: Failed";
+        exit(1);
+    }
     
     println "All complex lambda tests passed!";
     

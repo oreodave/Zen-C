@@ -783,6 +783,8 @@ ASTNode *parse_lambda(ParserContext *ctx, Lexer *l)
 
     lexer_next(l);
 
+    Type *t = type_new(TYPE_FUNCTION);
+    t->args = xmalloc(sizeof(Type *) * 16);
     char **param_names = xmalloc(sizeof(char *) * 16);
     char **param_types = xmalloc(sizeof(char *) * 16);
     int num_params = 0;
@@ -814,9 +816,11 @@ ASTNode *parse_lambda(ParserContext *ctx, Lexer *l)
 
         lexer_next(l);
 
-        char *param_type_str = parse_type(ctx, l);
-        param_types[num_params] = param_type_str;
+        Type *typef = parse_type_formal(ctx, l);
+        t->args[t->arg_count] = typef;
+        param_types[num_params] = type_to_string(typef);
         num_params++;
+        t->arg_count = num_params;
     }
     lexer_next(l);
 
@@ -824,7 +828,16 @@ ASTNode *parse_lambda(ParserContext *ctx, Lexer *l)
     if (lexer_peek(l).type == TOK_ARROW)
     {
         lexer_next(l);
-        return_type = parse_type(ctx, l);
+
+        t->inner = parse_type_formal(ctx, l);
+        return_type = type_to_string(t->inner);
+    }
+
+    enter_scope(ctx);
+
+    for (int i = 0; i < num_params; i++)
+    {
+        add_symbol(ctx, param_names[i], param_types[i], t->args[i]);
     }
 
     ASTNode *body = NULL;
@@ -845,8 +858,12 @@ ASTNode *parse_lambda(ParserContext *ctx, Lexer *l)
     lambda->lambda.num_params = num_params;
     lambda->lambda.lambda_id = ctx->lambda_counter++;
     lambda->lambda.is_expression = 0;
+    lambda->type_info = t;
+    lambda->resolved_type = type_to_string(t);
     register_lambda(ctx, lambda);
     analyze_lambda_captures(ctx, lambda);
+
+    exit_scope(ctx);
 
     return lambda;
 }
